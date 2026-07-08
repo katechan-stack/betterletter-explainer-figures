@@ -1,0 +1,628 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+<title>Approval Control - check your understanding</title>
+
+<style>
+  :root{
+    --navy:#011936;
+    --bg:#F4F4F4;
+    --white:#FFFFFF;
+    --accent:#68E7D1;
+    --salmon:#F79CA4;
+    --salmon-border:#EF3E5D;
+    --lemon:#F7E69D;
+    --lemon-border:#CFC344;
+    --subtle:#556D8A;
+    --border:#DEE7EE;
+    --border-strong:#7A8B9F;
+    --green:#1B5E20;
+    --green-border:#1B5E20;
+    --green-tint:#EAF4EA;
+    --red:#A31515;
+    --red-border:#A31515;
+    --red-tint:#FBEBEB;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--navy);
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    font-size:16px;
+    line-height:1.5;
+  }
+
+  .page{
+    max-width:780px;
+    margin:0 auto;
+    padding:20px 20px 24px;
+  }
+
+  h1{
+    font-size:24px;
+    line-height:32px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+
+  .intro{
+    font-size:16px;
+    line-height:24px;
+    margin:0 0 16px;
+    max-width:70ch;
+  }
+
+  .progress-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    margin:0 0 6px;
+  }
+
+  .progress-label{
+    font-size:16px;
+    line-height:22px;
+    font-weight:700;
+    margin:0;
+  }
+
+  .type-chip{
+    display:inline-block;
+    background:var(--bg);
+    border:1px solid var(--border-strong);
+    border-radius:4px;
+    padding:1px 8px;
+    font-size:14px;
+    line-height:20px;
+    font-weight:700;
+    color:var(--subtle);
+    white-space:nowrap;
+  }
+
+  .progress-track{
+    height:8px;
+    background:var(--border);
+    border-radius:999px;
+    overflow:hidden;
+    margin:0 0 14px;
+  }
+
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:var(--navy);
+    border-radius:999px;
+    transition:width .15s ease;
+  }
+
+  .card{
+    background:var(--white);
+    border:2px solid var(--border);
+    border-radius:8px;
+    padding:20px;
+  }
+
+  .question-eyebrow{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0 0 10px;
+  }
+
+  .question-text{
+    font-size:18px;
+    line-height:26px;
+    font-weight:700;
+    margin:0 0 16px;
+  }
+
+  .reveal-btn,
+  .restart-btn,
+  .continue-btn{
+    display:inline-block;
+    min-height:44px;
+    padding:10px 20px;
+    background:var(--navy);
+    color:var(--white);
+    border:2px solid var(--navy);
+    border-radius:4px;
+    font-family:inherit;
+    font-size:16px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+
+  .reveal-btn:hover,
+  .restart-btn:hover,
+  .continue-btn:hover{
+    background:#0A2E52;
+    border-color:#0A2E52;
+  }
+
+  .reveal-btn:focus-visible,
+  .restart-btn:focus-visible,
+  .continue-btn:focus-visible,
+  .mark-btn:focus-visible,
+  .option-btn:focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  .answer-block{
+    display:none;
+    margin:0;
+    padding:12px 14px;
+    background:var(--bg);
+    border-left:4px solid var(--navy);
+    border-radius:4px;
+    font-size:16px;
+    line-height:24px;
+  }
+
+  .answer-block.visible{
+    display:block;
+  }
+
+  .answer-eyebrow{
+    display:block;
+    font-weight:700;
+    margin-bottom:4px;
+  }
+
+  .mark-row{
+    display:none;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+  }
+
+  .mark-row.visible{
+    display:flex;
+  }
+
+  .mark-prompt{
+    flex:1 1 100%;
+    margin:0 0 2px;
+    font-size:16px;
+    line-height:22px;
+  }
+
+  .mark-btn{
+    min-height:44px;
+    padding:10px 18px;
+    background:var(--white);
+    color:var(--navy);
+    border:2px solid var(--navy);
+    border-radius:4px;
+    font-family:inherit;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  .mark-btn:hover{
+    background:var(--bg);
+  }
+
+  /* Multiple choice */
+  .options-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin:0 0 16px;
+    padding:0;
+    list-style:none;
+  }
+
+  .option-btn{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    width:100%;
+    min-height:44px;
+    padding:10px 16px;
+    background:var(--white);
+    border:2px solid var(--border-strong);
+    border-radius:6px;
+    font-family:inherit;
+    font-size:16px;
+    line-height:22px;
+    font-weight:400;
+    color:var(--navy);
+    text-align:left;
+    cursor:pointer;
+  }
+
+  .option-btn:hover:not(:disabled){
+    border-color:var(--navy);
+  }
+
+  .option-btn:disabled{
+    cursor:default;
+  }
+
+  .option-btn.dimmed{
+    opacity:0.55;
+  }
+
+  .option-btn.correct{
+    background:var(--green-tint);
+    border-color:var(--green-border);
+    font-weight:700;
+  }
+
+  .option-btn.incorrect{
+    background:var(--red-tint);
+    border-color:var(--red-border);
+    font-weight:700;
+  }
+
+  .option-tag{
+    flex:0 0 auto;
+    font-size:14px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+  }
+
+  .option-tag.tag-correct{
+    color:var(--green);
+  }
+
+  .option-tag.tag-incorrect{
+    color:var(--red);
+  }
+
+  .explanation-block{
+    display:none;
+    margin:0 0 16px;
+    padding:12px 14px;
+    background:var(--bg);
+    border-left:4px solid var(--navy);
+    border-radius:4px;
+    font-size:16px;
+    line-height:24px;
+  }
+
+  .explanation-block.visible{
+    display:block;
+  }
+
+  .continue-row{
+    display:none;
+  }
+
+  .continue-row.visible{
+    display:block;
+  }
+
+  .summary{
+    display:none;
+  }
+
+  .summary.visible{
+    display:block;
+  }
+
+  .score-line{
+    font-size:24px;
+    line-height:32px;
+    font-weight:700;
+    margin:0 0 12px;
+  }
+
+  .recap{
+    list-style:none;
+    margin:0 0 16px;
+    padding:0;
+    border-top:1px solid var(--border);
+  }
+
+  .recap li{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    padding:8px 0;
+    border-bottom:1px solid var(--border);
+    font-size:16px;
+    line-height:22px;
+  }
+
+  .recap-label{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .recap .mark{
+    flex:0 0 auto;
+    font-weight:700;
+  }
+
+  .recap .mark.mark-correct{
+    color:var(--green);
+  }
+
+  .recap .mark.mark-missed{
+    color:var(--red);
+  }
+
+  .verdict{
+    font-size:16px;
+    line-height:24px;
+    font-weight:700;
+    margin:0 0 16px;
+  }
+</style>
+
+<div class="page">
+  <h1>Approval Control - check your understanding</h1>
+  <p class="intro">Answer each question, then check yourself honestly. Sign-off standard: all 5 here, plus the internal-only question on the explainer page.</p>
+
+  <div class="progress-row">
+    <p class="progress-label" id="progress-label">Question 1 of 5</p>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+
+  <div class="card" id="question-card">
+    <p class="question-text" id="question-text"></p>
+
+    <!-- Open recall question UI -->
+    <div id="open-block">
+      <button type="button" class="reveal-btn" id="reveal-btn">REVEAL ANSWER</button>
+      <div class="answer-block" id="answer-block">
+        <span class="answer-eyebrow">Answer</span>
+        <span id="answer-text"></span>
+      </div>
+      <div class="mark-row" id="mark-row">
+        <p class="mark-prompt">Mark yourself honestly:</p>
+        <button type="button" class="mark-btn" id="mark-got">I got it</button>
+        <button type="button" class="mark-btn" id="mark-missed">I missed it</button>
+      </div>
+    </div>
+
+    <!-- Multiple choice question UI -->
+    <div id="mc-block">
+      <ul class="options-list" id="options-list"></ul>
+      <div class="explanation-block" id="explanation-block">
+        <span class="answer-eyebrow">Why</span>
+        <span id="explanation-text"></span>
+      </div>
+      <div class="continue-row" id="continue-row">
+        <button type="button" class="continue-btn" id="continue-btn">CONTINUE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card summary" id="summary-card">
+    <p class="score-line" id="score-line"></p>
+    <ul class="recap" id="recap-list"></ul>
+    <p class="verdict" id="verdict-line"></p>
+    <button type="button" class="restart-btn" id="restart-btn">START AGAIN</button>
+  </div>
+</div>
+
+<script>
+  var QUESTIONS = [
+    {
+      type: "open",
+      short: "Why removals vs configurable profiles",
+      q: "Before Approval Control existed, some guardrails were removed or downgraded for every user, with no setting involved. Why did the team split the work this way rather than making everything configurable?",
+      a: "The clinical review found some guardrails added no safety for anyone (the hormone-code warning, out-of-range BP, repeated items, BMI mismatch) - a click with no benefit was deleted or downgraded to an FYI for everyone. Only guardrails whose value genuinely differs between users became the configurable profiles."
+    },
+    {
+      type: "mc",
+      short: "Risk-based letter - what still needs a click",
+      q: "A coder on Risk-based opens a letter with a diagnosis suggestion, a weight value, and an Old date warning. What still demands a click before the letter can be completed?",
+      options: [
+        "All three",
+        "The diagnosis only",
+        "The diagnosis and the Old date warning",
+        "Nothing - Risk-based removes all clicks"
+      ],
+      correctIndex: 1,
+      explanation: "Risk-based keeps per-row approval only for high clinical risk annotations like diagnoses - general values need no approval, and Old date is the one warning that drops off outside High touch."
+    },
+    {
+      type: "mc",
+      short: "Practice default change - exception user",
+      q: "The practice default is High touch. Kate is in the Risk-based exceptions bucket. The admin switches the practice default to Low touch. What happens to Kate?",
+      options: [
+        "She moves to Low touch with everyone else",
+        "She stays Risk-based",
+        "She reverts to High touch for safety",
+        "She is prompted to choose a profile"
+      ],
+      correctIndex: 1,
+      explanation: "An exception beats the practice default - the settings page says 'Changing the practice default won't affect the profiles of the users below.' Only dragging her chip moves her."
+    },
+    {
+      type: "mc",
+      short: "Low touch audit - are approvals missing?",
+      q: "An auditor reviews a letter completed by a Low touch coder and sees no per-row approval clicks on the high-risk annotations. Are those approvals missing?",
+      options: [
+        "Yes - they were never made",
+        "No - they were logged as implicit approvals when the letter was submitted",
+        "No - the AI approved them itself",
+        "Yes - unless someone reopens the letter"
+      ],
+      correctIndex: 1,
+      explanation: "Lower-touch profiles hide guardrails, never delete them - at completion every hidden item is logged as implicitly approved, distinct from explicit clicks, so audits can tell the difference."
+    },
+    {
+      type: "open",
+      short: "Practice asks to turn confirmations off",
+      q: "A practice manager on a call says 'Reviewing feels slow; can you just turn the confirmations off for us?' What is the one thing your answer must include, and what would you actually do?",
+      a: "Lead with the declaration's point: coders stay fully accountable and must still read the letter and check the annotations - a profile changes clicks, not responsibility. Then point them to Approval Control settings (Practice Settings, SETTINGS tab, MANAGE APPROVAL CONTROL) and suggest Risk-based or per-user exceptions before practice-wide Low touch."
+    }
+  ];
+
+  var TOTAL = QUESTIONS.length;
+  var index = 0;
+  var results = []; // true = correct/got it, false = missed, per question
+
+  function renderQuestion(){
+    var item = QUESTIONS[index];
+    document.getElementById('question-card').style.display = 'block';
+    document.getElementById('summary-card').classList.remove('visible');
+
+    document.getElementById('progress-label').textContent = 'Question ' + (index + 1) + ' of ' + TOTAL;
+    document.getElementById('progress-fill').style.width = ((index / TOTAL) * 100) + '%';
+
+    document.getElementById('question-text').textContent = item.q;
+
+    var isOpen = item.type === 'open';
+    document.getElementById('open-block').style.display = isOpen ? 'block' : 'none';
+    document.getElementById('mc-block').style.display = isOpen ? 'none' : 'block';
+
+    if (isOpen){
+      document.getElementById('answer-text').textContent = item.a;
+      document.getElementById('reveal-btn').style.display = 'inline-block';
+      document.getElementById('answer-block').classList.remove('visible');
+      document.getElementById('mark-row').classList.remove('visible');
+    } else {
+      renderOptions(item);
+      document.getElementById('explanation-block').classList.remove('visible');
+      document.getElementById('continue-row').classList.remove('visible');
+    }
+  }
+
+  function renderOptions(item){
+    var list = document.getElementById('options-list');
+    list.innerHTML = '';
+    item.options.forEach(function(optionText, i){
+      var li = document.createElement('li');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'option-btn';
+
+      var label = document.createElement('span');
+      label.className = 'option-label';
+      label.textContent = optionText;
+      btn.appendChild(label);
+
+      btn.addEventListener('click', function(){ selectOption(item, i); });
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  function selectOption(item, chosenIndex){
+    var buttons = document.querySelectorAll('#options-list .option-btn');
+    var isCorrectFirstClick = (chosenIndex === item.correctIndex);
+
+    buttons.forEach(function(btn, i){
+      btn.disabled = true;
+      if (i === chosenIndex && i === item.correctIndex){
+        btn.classList.add('correct');
+        addTag(btn, 'Correct', 'tag-correct');
+      } else if (i === chosenIndex && i !== item.correctIndex){
+        btn.classList.add('incorrect');
+        addTag(btn, 'Not quite', 'tag-incorrect');
+      } else if (i === item.correctIndex){
+        btn.classList.add('correct');
+        addTag(btn, 'Correct', 'tag-correct');
+      } else {
+        btn.classList.add('dimmed');
+      }
+    });
+
+    document.getElementById('explanation-text').textContent = item.explanation;
+    document.getElementById('explanation-block').classList.add('visible');
+    document.getElementById('continue-row').classList.add('visible');
+
+    results[index] = isCorrectFirstClick;
+  }
+
+  function addTag(btn, text, cls){
+    var tag = document.createElement('span');
+    tag.className = 'option-tag ' + cls;
+    tag.textContent = text;
+    btn.appendChild(tag);
+  }
+
+  function renderSummary(){
+    var got = results.filter(function(r){ return r; }).length;
+
+    document.getElementById('question-card').style.display = 'none';
+    document.getElementById('summary-card').classList.add('visible');
+
+    document.getElementById('progress-label').textContent = 'Finished - all ' + TOTAL + ' questions answered';
+    document.getElementById('progress-fill').style.width = '100%';
+
+    document.getElementById('score-line').textContent = 'You got ' + got + ' of ' + TOTAL;
+
+    var list = document.getElementById('recap-list');
+    list.innerHTML = '';
+    QUESTIONS.forEach(function(item, i){
+      var li = document.createElement('li');
+
+      var labelWrap = document.createElement('span');
+      labelWrap.className = 'recap-label';
+
+      var chip = document.createElement('span');
+      chip.className = 'type-chip';
+      chip.textContent = item.type === 'mc' ? 'MC' : 'Recall';
+      labelWrap.appendChild(chip);
+
+      var label = document.createElement('span');
+      label.textContent = 'Q' + (i + 1) + '. ' + item.short;
+      labelWrap.appendChild(label);
+
+      var mark = document.createElement('span');
+      var correct = !!results[i];
+      mark.className = 'mark ' + (correct ? 'mark-correct' : 'mark-missed');
+      mark.textContent = correct ? (item.type === 'mc' ? 'Correct' : 'Got it') : 'Missed';
+
+      li.appendChild(labelWrap);
+      li.appendChild(mark);
+      list.appendChild(li);
+    });
+
+    document.getElementById('verdict-line').textContent = (got === TOTAL)
+      ? 'All 5 correct - now check the internal-only question on the explainer page to finish signing off.'
+      : 'Review and retake - sign-off is all 5 here, plus the internal-only question on the explainer page.';
+  }
+
+  function reveal(){
+    document.getElementById('reveal-btn').style.display = 'none';
+    document.getElementById('answer-block').classList.add('visible');
+    document.getElementById('mark-row').classList.add('visible');
+  }
+
+  function advance(result){
+    results[index] = result;
+    index += 1;
+    if (index < TOTAL){
+      renderQuestion();
+    } else {
+      renderSummary();
+    }
+  }
+
+  function restart(){
+    index = 0;
+    results = [];
+    renderQuestion();
+  }
+
+  document.getElementById('reveal-btn').addEventListener('click', reveal);
+  document.getElementById('mark-got').addEventListener('click', function(){ advance(true); });
+  document.getElementById('mark-missed').addEventListener('click', function(){ advance(false); });
+  document.getElementById('continue-btn').addEventListener('click', function(){ advance(results[index]); });
+  document.getElementById('restart-btn').addEventListener('click', restart);
+
+  renderQuestion();
+</script>

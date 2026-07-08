@@ -1,0 +1,444 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+<title>What each profile looks like on a letter - Approval Control</title>
+
+<style>
+  :root{
+    --navy:#011936;
+    --bg:#F4F4F4;
+    --white:#FFFFFF;
+    --accent:#68E7D1;
+    --salmon:#F79CA4;
+    --salmon-border:#EF3E5D;
+    --lemon:#F7E69D;
+    --lemon-border:#CFC344;
+    --subtle:#556D8A;
+    --border:#DEE7EE;
+    --border-strong:#7A8B9F;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--navy);
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    font-size:16px;
+    line-height:1.5;
+  }
+
+  .page{
+    max-width:920px;
+    margin:0 auto;
+    padding:20px 20px 24px;
+  }
+
+  h1{
+    font-size:24px;
+    line-height:32px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+
+  .intro{
+    font-size:16px;
+    line-height:24px;
+    margin:0;
+    max-width:70ch;
+  }
+
+  fieldset{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 16px 12px;
+    background:var(--white);
+    margin:14px 0 0;
+  }
+
+  legend{
+    font-weight:700;
+    font-size:16px;
+    padding:0 4px;
+  }
+
+  .segmented{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px;
+  }
+
+  .option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-height:44px;
+    padding:0 12px;
+    border:2px solid var(--border-strong);
+    border-radius:6px;
+    cursor:pointer;
+    font-size:16px;
+    flex:1 1 auto;
+    background:var(--white);
+    transition:border-color .1s ease;
+  }
+
+  .option.selected{
+    border-color:var(--accent);
+    font-weight:700;
+  }
+
+  .option input[type="radio"]{
+    width:20px;
+    height:20px;
+    accent-color:var(--accent);
+    cursor:inherit;
+    flex:0 0 auto;
+  }
+
+  .example-caption{
+    font-size:14px;
+    line-height:19px;
+    color:var(--subtle);
+    margin:14px 0 10px;
+  }
+
+  .letter-pane{
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--bg);
+  }
+
+  .pane-title{
+    margin:0;
+    padding:8px 14px;
+    font-weight:700;
+    font-size:16px;
+    line-height:22px;
+    background:var(--white);
+    border-bottom:1px solid var(--border);
+  }
+
+  .issues-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin:10px 14px 0;
+    padding:4px 12px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:14px;
+    line-height:18px;
+    background:var(--border);
+    color:var(--navy);
+  }
+
+  .issues-pill.has-issues{
+    background:var(--salmon);
+    border:1px solid var(--salmon-border);
+  }
+
+  .pill-icon{
+    font-size:14px;
+    line-height:1;
+  }
+
+  .annotation-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:6px 12px;
+    margin:8px 14px;
+    padding:8px 12px;
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+
+  .row-label{
+    font-size:16px;
+    line-height:22px;
+    color:var(--navy);
+  }
+
+  .row-state{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:0 0 auto;
+  }
+
+  .approve-btn{
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    border:2px solid var(--border-strong);
+    background:var(--white);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:default;
+    font-size:14px;
+    line-height:1;
+    padding:0;
+  }
+
+  .approve-label{
+    font-size:16px;
+    line-height:20px;
+    font-weight:700;
+    color:var(--navy);
+  }
+
+  .quiet-tag{
+    display:inline-block;
+    font-size:16px;
+    line-height:20px;
+    color:var(--subtle);
+    background:#E7EEE9;
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:4px 10px;
+  }
+
+  .tickbox-row{
+    margin:4px 14px 8px;
+    padding:8px 12px;
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+
+  .tickbox-label{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:16px;
+    line-height:22px;
+    cursor:default;
+  }
+
+  .tickbox-input{
+    width:20px;
+    height:20px;
+    flex:0 0 auto;
+    accent-color:var(--accent);
+  }
+
+  .warnings-block{
+    margin:0 14px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .warning-strip{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:6px 12px;
+    padding:8px 12px;
+    background:var(--lemon);
+    border:1px solid var(--lemon-border);
+    border-radius:6px;
+    font-size:16px;
+    line-height:20px;
+  }
+
+  .ack-btn{
+    flex:0 0 auto;
+    border:2px solid var(--lemon-border);
+    background:var(--white);
+    color:var(--navy);
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.02em;
+    padding:6px 12px;
+    border-radius:4px;
+    cursor:default;
+    text-transform:uppercase;
+  }
+
+  .warning-dropped{
+    padding:6px 12px;
+    font-size:14px;
+    line-height:18px;
+    color:var(--subtle);
+    text-decoration:line-through;
+    opacity:0.75;
+  }
+
+  .clinical-note{
+    margin-top:14px;
+    background:var(--salmon);
+    border:1px solid var(--salmon-border);
+    border-left:4px solid var(--salmon-border);
+    border-radius:6px;
+    padding:12px 16px;
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    font-size:16px;
+    font-weight:700;
+    line-height:22px;
+    color:var(--navy);
+  }
+
+  .clinical-note .dot{
+    flex:0 0 auto;
+    width:10px;
+    height:10px;
+    margin-top:6px;
+    border-radius:50%;
+    background:var(--salmon-border);
+  }
+</style>
+
+<div class="page">
+  <h1>What each profile looks like on a letter</h1>
+  <p class="intro">The same example letter, seen under each Approval Control profile - pick one to compare.</p>
+
+  <fieldset>
+    <legend>Profile</legend>
+    <div class="segmented" id="group-profile">
+      <label class="option">
+        <input type="radio" name="profile" value="high" checked>
+        High touch
+      </label>
+      <label class="option">
+        <input type="radio" name="profile" value="risk">
+        Risk-based
+      </label>
+      <label class="option">
+        <input type="radio" name="profile" value="low">
+        Low touch
+      </label>
+    </div>
+  </fieldset>
+
+  <p class="example-caption">Example letter: 1 diagnosis, 2 general values (weight, blood pressure), 1 other annotation (social information), no tasks, 2 potential warnings (Missing letter text, Old date).</p>
+
+  <div class="letter-pane">
+    <p class="pane-title">What this user sees on an example letter</p>
+
+    <div class="issues-pill" id="issues-pill">
+      <span class="pill-icon" aria-hidden="true">&#128737;</span>
+      <span id="issues-pill-text">0 issues</span>
+    </div>
+
+    <div class="annotation-row">
+      <span class="row-label">Diagnosis - Polymyalgia rheumatica</span>
+      <div class="row-state" id="state-diagnosis"></div>
+    </div>
+    <div class="annotation-row">
+      <span class="row-label">General value - Weight 82 kg</span>
+      <div class="row-state" id="state-weight"></div>
+    </div>
+    <div class="annotation-row">
+      <span class="row-label">General value - Blood pressure 128/84</span>
+      <div class="row-state" id="state-bp"></div>
+    </div>
+    <div class="annotation-row">
+      <span class="row-label">Other annotation - Lives alone (social information)</span>
+      <div class="row-state" id="state-social"></div>
+    </div>
+
+    <div class="tickbox-row" id="tickbox-row"></div>
+
+    <div class="warnings-block" id="warnings-block"></div>
+  </div>
+
+  <div class="clinical-note">
+    <span class="dot"></span>
+    <span>Whatever the profile, the reviewer remains responsible for checking the letter. Hidden approvals are logged as implicitly approved at submission - they are not deleted.</span>
+  </div>
+</div>
+
+<script>
+  var ROW_DEFS = ['diagnosis', 'weight', 'bp', 'social'];
+
+  var ROW_NEEDS_CLICK = {
+    high: { diagnosis: true, weight: true, bp: true, social: true },
+    risk: { diagnosis: true, weight: false, bp: false, social: false },
+    low:  { diagnosis: false, weight: false, bp: false, social: false }
+  };
+
+  function renderRowStates(winningKey){
+    ROW_DEFS.forEach(function(key){
+      var el = document.getElementById('state-' + key);
+      var needsClick = ROW_NEEDS_CLICK[winningKey][key];
+      if (needsClick){
+        el.innerHTML = '<button type="button" class="approve-btn" title="Created by AI. Click to confirm" aria-label="Click to confirm">&#128737;</button><span class="approve-label">Click to confirm</span>';
+      } else {
+        el.innerHTML = '<span class="quiet-tag">No approval needed - files automatically</span>';
+      }
+    });
+  }
+
+  function renderTickbox(winningKey){
+    var el = document.getElementById('tickbox-row');
+    if (winningKey === 'high'){
+      el.innerHTML = '<label class="tickbox-label"><input type="checkbox" class="tickbox-input"> Confirm there are no tasks present on this letter</label>';
+    } else {
+      el.innerHTML = '<span class="quiet-tag">No tasks tickbox - not required</span>';
+    }
+  }
+
+  function renderWarnings(winningKey){
+    var el = document.getElementById('warnings-block');
+    var missingLetterText = '<div class="warning-strip"><span class="warning-text">Missing letter text - acknowledge before completing</span><button type="button" class="ack-btn">ACKNOWLEDGE</button></div>';
+    if (winningKey === 'high'){
+      el.innerHTML = missingLetterText +
+        '<div class="warning-strip"><span class="warning-text">Old date - acknowledge before completing</span><button type="button" class="ack-btn">ACKNOWLEDGE</button></div>';
+    } else {
+      el.innerHTML = missingLetterText +
+        '<div class="warning-dropped">Old date warning - dropped in this profile</div>';
+    }
+  }
+
+  function renderIssuesPill(winningKey){
+    var needsClick = ROW_NEEDS_CLICK[winningKey];
+    var approvalsCount = ROW_DEFS.reduce(function(total, key){
+      return total + (needsClick[key] ? 1 : 0);
+    }, 0);
+    var tickboxCount = winningKey === 'high' ? 1 : 0;
+    var warningsCount = winningKey === 'high' ? 2 : 1;
+    var total = approvalsCount + tickboxCount + warningsCount;
+
+    var pill = document.getElementById('issues-pill');
+    var text = document.getElementById('issues-pill-text');
+    text.textContent = total + (total === 1 ? ' issue' : ' issues');
+    pill.classList.toggle('has-issues', total > 0);
+  }
+
+  function markSelected(){
+    var options = document.querySelectorAll('#group-profile .option');
+    options.forEach(function(opt){
+      var input = opt.querySelector('input');
+      opt.classList.toggle('selected', input.checked);
+    });
+  }
+
+  function update(){
+    var el = document.querySelector('input[name="profile"]:checked');
+    var winningKey = el ? el.value : 'high';
+
+    markSelected();
+    renderRowStates(winningKey);
+    renderTickbox(winningKey);
+    renderWarnings(winningKey);
+    renderIssuesPill(winningKey);
+  }
+
+  document.querySelectorAll('input[type="radio"]').forEach(function(input){
+    input.addEventListener('change', update);
+  });
+
+  update();
+</script>

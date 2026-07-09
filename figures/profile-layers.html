@@ -1,0 +1,369 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+<title>Three Approval Control profiles, nested - what each one requires</title>
+
+<style>
+  :root{
+    --navy:#011936;
+    --bg:#F4F4F4;
+    --white:#FFFFFF;
+    --accent:#68E7D1;
+    --subtle:#556D8A;
+    --border:#DEE7EE;
+    --border-strong:#7A8B9F;
+    --ring-outer:#EEF1F5;
+    --ring-middle:#DCE3EA;
+    --ring-inner:#C7D2DE;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--navy);
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    font-size:16px;
+    line-height:1.5;
+  }
+
+  .page{
+    max-width:920px;
+    margin:0 auto;
+    padding:18px 20px 18px;
+  }
+
+  h1{
+    font-size:24px;
+    line-height:32px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+
+  .intro{
+    font-size:16px;
+    line-height:22px;
+    margin:0;
+    max-width:80ch;
+  }
+
+  .hint{
+    font-size:16px;
+    line-height:20px;
+    color:var(--subtle);
+    margin:6px 0 0;
+  }
+
+  .layout{
+    display:flex;
+    gap:16px;
+    align-items:flex-start;
+    margin-top:6px;
+    flex-wrap:wrap;
+  }
+
+  .diagram-col{
+    flex:0 0 auto;
+  }
+
+  .diagram-col svg{
+    display:block;
+    max-width:100%;
+    height:auto;
+  }
+
+  svg text{
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    fill:var(--navy);
+    text-anchor:middle;
+    user-select:none;
+  }
+
+  .ring{
+    stroke:var(--border-strong);
+    stroke-width:1.5;
+    cursor:pointer;
+    transition:stroke .12s ease, stroke-width .12s ease, filter .12s ease;
+  }
+
+  .ring:hover{
+    stroke:var(--navy);
+  }
+
+  .ring.selected{
+    stroke:var(--accent);
+    stroke-width:5;
+  }
+
+  .ring-label-title{
+    font-size:19px;
+    font-weight:700;
+  }
+
+  .ring-label-sub{
+    font-size:15px;
+    font-weight:400;
+    fill:var(--subtle);
+  }
+
+  .panel-col{
+    flex:1 1 420px;
+    min-width:340px;
+  }
+
+  .panel-card{
+    background:var(--white);
+    border:2px solid var(--border);
+    border-radius:8px;
+    padding:14px 18px 16px;
+  }
+
+  .panel-eyebrow{
+    font-size:14px;
+    color:var(--subtle);
+    margin:0 0 2px;
+  }
+
+  .panel-heading{
+    font-size:18px;
+    line-height:22px;
+    font-weight:700;
+    margin:0 0 8px;
+  }
+
+  .check-list{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+
+  .check-row{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    padding:5px 8px;
+    border-radius:6px;
+  }
+
+  .check-row.required{
+    background:#F4F7FA;
+  }
+
+  .check-icon{
+    flex:0 0 auto;
+    width:20px;
+    height:20px;
+    margin-top:1px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+  }
+
+  .check-row.required .check-icon{
+    background:var(--navy);
+    color:var(--white);
+  }
+
+  .check-row.not-required .check-icon{
+    background:transparent;
+    border:2px solid var(--border-strong);
+  }
+
+  .check-body{
+    flex:1 1 auto;
+    min-width:0;
+  }
+
+  .check-text{
+    font-size:16px;
+    line-height:20px;
+  }
+
+  .check-row.not-required .check-text{
+    text-decoration:line-through;
+    color:var(--subtle);
+    opacity:.85;
+  }
+
+  .not-req-note{
+    display:block;
+    font-size:14px;
+    line-height:17px;
+    color:var(--subtle);
+    font-weight:400;
+    text-decoration:none;
+  }
+
+  .new-tag{
+    display:inline-block;
+    margin-top:3px;
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    color:var(--navy);
+    background:var(--white);
+    border:2px solid var(--accent);
+    border-radius:4px;
+    padding:1px 7px;
+  }
+
+  .diagram-caption{
+    font-size:16px;
+    line-height:22px;
+    color:var(--subtle);
+    margin:10px 0 0;
+    max-width:100%;
+  }
+</style>
+
+<div class="page">
+  <h1>The three Approval Control profiles are nested, not separate</h1>
+  <p class="intro">
+    Low touch, Risk-based and High touch aren't three unrelated settings. Each one is the profile
+    inside it, plus one more layer of required checks. Nothing is ever removed as you move inward -
+    only added as you move outward.
+  </p>
+  <p class="hint">Click a ring below to see exactly what a reviewer must do under that profile.</p>
+
+  <div class="layout">
+    <div class="diagram-col">
+      <svg id="diagram" viewBox="0 0 420 420" width="420" height="420" role="img" aria-label="Nested diagram of the three Approval Control profiles">
+        <g id="ring-high" class="ring-hit">
+          <rect class="ring" x="8" y="8" width="404" height="404" rx="40" fill="var(--ring-outer)"></rect>
+          <text class="ring-label-title" x="210" y="36">High touch</text>
+          <text class="ring-label-sub" x="210" y="56">Adds: approve everything else + tickbox + old-date warning</text>
+        </g>
+        <g id="ring-risk" class="ring-hit">
+          <rect class="ring" x="68" y="68" width="284" height="284" rx="32" fill="var(--ring-middle)"></rect>
+          <text class="ring-label-title" x="210" y="96">Risk-based</text>
+          <text class="ring-label-sub" x="210" y="116">Adds: approve high clinical risk items</text>
+        </g>
+        <g id="ring-low" class="ring-hit">
+          <rect class="ring" x="128" y="128" width="164" height="164" rx="24" fill="var(--ring-inner)"></rect>
+          <text class="ring-label-title" x="210" y="203">Low touch</text>
+          <text class="ring-label-sub" x="210" y="223">Requires: 4</text>
+          <text class="ring-label-sub" x="210" y="240">warnings only</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="panel-col">
+      <div class="panel-card">
+        <p class="panel-eyebrow" id="panel-eyebrow">Selected profile: High touch</p>
+        <h2 class="panel-heading">On this profile, a reviewer must:</h2>
+        <div class="check-list" id="check-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="diagram-caption">
+    Each lower-touch profile requires less - never more. Nothing here is deleted; a higher-touch
+    colleague opening the same letter sees the outer rings again.
+  </p>
+</div>
+
+<script>
+  var LAYERS = [
+    {
+      level: 0,
+      items: [
+        { text: "Acknowledge warning: Benign cancer codes" },
+        { text: "Acknowledge warning: Missing letter text" },
+        { text: "Acknowledge warning: Cancer code not QOF" },
+        { text: "Acknowledge warning: Fracture code" }
+      ]
+    },
+    {
+      level: 1,
+      items: [
+        { text: "Per-row approval for high clinical risk annotations (diagnoses, bloods, safeguarding)" }
+      ]
+    },
+    {
+      level: 2,
+      items: [
+        { text: "Per-row approval for the rest too (general values and all other annotations)" },
+        { text: "Confirm there are no tasks present on this letter (tickbox)" },
+        { text: "Acknowledge warning: Old date" }
+      ]
+    }
+  ];
+
+  var PROFILES = {
+    high: { name: "High touch", level: 2, ringId: "ring-high" },
+    risk: { name: "Risk-based", level: 1, ringId: "ring-risk" },
+    low:  { name: "Low touch",  level: 0, ringId: "ring-low" }
+  };
+
+  function renderChecklist(selectedLevel){
+    var list = document.getElementById("check-list");
+    list.innerHTML = "";
+
+    LAYERS.forEach(function(layer){
+      layer.items.forEach(function(item){
+        var required = layer.level <= selectedLevel;
+        var isNew = layer.level === selectedLevel && selectedLevel > 0;
+
+        var row = document.createElement("div");
+        row.className = "check-row " + (required ? "required" : "not-required");
+
+        var icon = document.createElement("span");
+        icon.className = "check-icon";
+        if (required){
+          icon.textContent = "✓";
+        }
+        row.appendChild(icon);
+
+        var body = document.createElement("div");
+        body.className = "check-body";
+
+        var textEl = document.createElement("span");
+        textEl.className = "check-text";
+        textEl.textContent = item.text;
+        body.appendChild(textEl);
+
+        if (!required){
+          var note = document.createElement("span");
+          note.className = "not-req-note";
+          note.textContent = "Not required here";
+          body.appendChild(note);
+        } else if (isNew){
+          var tag = document.createElement("span");
+          tag.className = "new-tag";
+          tag.textContent = "New at this level";
+          body.appendChild(tag);
+        }
+
+        row.appendChild(body);
+        list.appendChild(row);
+      });
+    });
+  }
+
+  function selectProfile(key){
+    var profile = PROFILES[key];
+    if (!profile) return;
+
+    Object.keys(PROFILES).forEach(function(k){
+      document.getElementById(PROFILES[k].ringId).querySelector(".ring").classList.remove("selected");
+    });
+    document.getElementById(profile.ringId).querySelector(".ring").classList.add("selected");
+
+    document.getElementById("panel-eyebrow").textContent = "Selected profile: " + profile.name;
+
+    renderChecklist(profile.level);
+  }
+
+  Object.keys(PROFILES).forEach(function(key){
+    var el = document.getElementById(PROFILES[key].ringId);
+    el.addEventListener("click", function(){ selectProfile(key); });
+  });
+
+  selectProfile("high");
+</script>

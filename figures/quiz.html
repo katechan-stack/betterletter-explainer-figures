@@ -367,7 +367,7 @@
 
 <div class="page">
   <h1>Approval Control - check your understanding</h1>
-  <p class="intro">Answer each question, then check yourself honestly. Sign-off standard: all 5 here, plus the internal-only question on the explainer page.</p>
+  <p class="intro">Answer each question, then check yourself honestly. It's an optional self-check - nothing is recorded, and there's no pass mark.</p>
 
   <div class="progress-row">
     <p class="progress-label" id="progress-label">Question 1 of 5</p>
@@ -438,15 +438,15 @@
     {
       type: "mc",
       short: "Practice default change - exception user",
-      q: "The practice default is High touch. Kate is in the Risk-based exceptions bucket. The admin switches the practice default to Low touch. What happens to Kate?",
+      q: "The practice default is High touch. A coder is in the Risk-based exceptions bucket. The admin switches the practice default to Low touch. What happens to that coder?",
       options: [
-        "She moves to Low touch with everyone else",
-        "She stays Risk-based",
-        "She reverts to High touch for safety",
-        "She is prompted to choose a profile"
+        "They move to Low touch with everyone else",
+        "They stay Risk-based",
+        "They revert to High touch for safety",
+        "They are prompted to choose a profile"
       ],
       correctIndex: 1,
-      explanation: "An exception beats the practice default - the settings page says 'Changing the practice default won't affect the profiles of the users below.' Only dragging her chip moves her."
+      explanation: "An exception beats the practice default - the settings page says 'Changing the practice default won't affect the profiles of the users below.' Only dragging their chip moves them."
     },
     {
       type: "mc",
@@ -459,7 +459,7 @@
         "Yes - unless someone reopens the letter"
       ],
       correctIndex: 1,
-      explanation: "Lower-touch profiles hide guardrails, never delete them - at completion every hidden item is logged as implicitly approved, distinct from explicit clicks, so audits can tell the difference."
+      explanation: "Lower-touch profiles hide guardrails, never delete them - at submission every hidden item is logged as implicitly approved, distinct from explicit clicks, so audits can tell the difference."
     },
     {
       type: "open",
@@ -592,8 +592,8 @@
     });
 
     document.getElementById('verdict-line').textContent = (got === TOTAL)
-      ? 'All 5 correct - now check the internal-only question on the explainer page to finish signing off.'
-      : 'Review and retake - sign-off is all 5 here, plus the internal-only question on the explainer page.';
+      ? 'All 5 correct - nice work.'
+      : 'Worth re-reading the ones you missed, then retake if you like.';
   }
 
   function reveal(){

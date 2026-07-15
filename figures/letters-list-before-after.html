@@ -1,0 +1,439 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+<title>Where did my tabs go? - from fixed tabs to presets and filters</title>
+
+<style>
+  :root{
+    --navy:#011936;
+    --bg:#F4F4F4;
+    --white:#FFFFFF;
+    --accent:#68E7D1;
+    --subtle:#556D8A;
+    --border:#DEE7EE;
+    --border-strong:#7A8B9F;
+    --node-fill:#E2E8F0;
+    --slate:#64748B;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--navy);
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    font-size:16px;
+    line-height:1.5;
+  }
+
+  .page{
+    max-width:960px;
+    margin:0 auto;
+    padding:18px 20px 24px;
+  }
+
+  h1{
+    font-size:24px;
+    line-height:32px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+
+  .intro{
+    font-size:16px;
+    line-height:22px;
+    margin:0 0 4px;
+    max-width:80ch;
+  }
+
+  .hint{
+    font-size:16px;
+    line-height:20px;
+    color:var(--subtle);
+    margin:6px 0 16px;
+  }
+
+  .scroll-wrap{
+    overflow-x:auto;
+    padding-bottom:4px;
+  }
+
+  .diagram{
+    min-width:640px;
+  }
+
+  /* Legacy tab bar */
+  .legacy-bar{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    background:var(--navy);
+    border-radius:8px 8px 0 0;
+    padding:12px 14px;
+  }
+
+  .legacy-eyebrow-row{
+    width:100%;
+    margin:0 0 2px;
+  }
+
+  .legacy-eyebrow{
+    color:#AEC3D8;
+    font-size:14px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    margin:0;
+  }
+
+  .tab-pill{
+    appearance:none;
+    border:2px solid rgba(255,255,255,0.35);
+    background:transparent;
+    color:var(--white);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    border-radius:999px;
+    padding:8px 18px;
+    min-height:40px;
+    cursor:pointer;
+    transition:all .12s ease;
+  }
+
+  .tab-pill:hover{
+    border-color:rgba(255,255,255,0.7);
+  }
+
+  .tab-pill.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:var(--navy);
+  }
+
+  .tab-pill:focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  /* Becomes divider */
+  .becomes-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:var(--white);
+    border-left:2px solid var(--border);
+    border-right:2px solid var(--border);
+    padding:8px 0;
+  }
+
+  .becomes-chip{
+    font-size:14px;
+    font-weight:700;
+    color:var(--subtle);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .becomes-arrow{
+    font-size:18px;
+    line-height:1;
+  }
+
+  /* Letters toolbar mock */
+  .toolbar{
+    background:var(--white);
+    border:2px solid var(--border);
+    border-top:none;
+    border-radius:0 0 8px 8px;
+    padding:14px;
+  }
+
+  .toolbar-row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:10px;
+  }
+
+  .tb-btn{
+    appearance:none;
+    min-height:40px;
+    padding:8px 16px;
+    background:var(--white);
+    border:2px solid var(--border-strong);
+    border-radius:6px;
+    color:var(--navy);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    cursor:default;
+  }
+
+  .preset-btn{
+    appearance:none;
+    min-height:40px;
+    padding:8px 16px;
+    background:var(--white);
+    border:2px solid var(--accent);
+    border-radius:999px;
+    color:var(--navy);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    cursor:default;
+    transition:all .12s ease;
+  }
+
+  .preset-btn .count{
+    color:var(--subtle);
+    font-weight:400;
+    margin-left:4px;
+  }
+
+  .preset-btn.highlight{
+    background:var(--accent);
+    box-shadow:0 0 0 3px rgba(104,231,209,0.5);
+  }
+
+  .tb-btn.highlight{
+    border-color:var(--navy);
+    box-shadow:0 0 0 3px rgba(1,25,54,0.15);
+  }
+
+  .split-btn{
+    display:flex;
+    margin-left:auto;
+  }
+
+  .split-btn .main,
+  .split-btn .chev{
+    min-height:40px;
+    background:var(--navy);
+    color:var(--white);
+    border:2px solid var(--navy);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    cursor:default;
+  }
+
+  .split-btn .main{
+    padding:8px 16px;
+    border-radius:6px 0 0 6px;
+    border-right:1px solid rgba(255,255,255,0.3);
+  }
+
+  .split-btn .chev{
+    padding:8px 10px;
+    border-radius:0 6px 6px 0;
+  }
+
+  /* Column header strip */
+  .columns-label{
+    font-size:14px;
+    color:var(--subtle);
+    margin:2px 0 6px;
+  }
+
+  .column-strip{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    border-top:2px solid var(--border);
+    padding-top:10px;
+  }
+
+  .col-chip{
+    font-size:14px;
+    font-weight:700;
+    color:var(--subtle);
+    background:var(--node-fill);
+    border:2px solid transparent;
+    border-radius:4px;
+    padding:5px 10px;
+    transition:all .12s ease;
+  }
+
+  .col-chip.highlight{
+    color:var(--navy);
+    border-color:var(--accent);
+    background:#D3F5EE;
+  }
+
+  /* Caption panel */
+  .panel-card{
+    background:var(--white);
+    border:2px solid var(--border);
+    border-radius:8px;
+    padding:14px 18px 16px;
+    margin-top:16px;
+  }
+
+  .panel-eyebrow{
+    font-size:14px;
+    color:var(--subtle);
+    margin:0 0 4px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+  }
+
+  .panel-text{
+    font-size:17px;
+    line-height:24px;
+    margin:0;
+  }
+
+  .panel-text .arrow{
+    color:var(--slate);
+    margin:0 4px;
+  }
+
+  .panel-text.placeholder{
+    color:var(--subtle);
+  }
+</style>
+
+<div class="page">
+  <h1>Where did my tabs go?</h1>
+  <p class="intro">The old tabs were fixed queues. Now those same slices are preset buttons (each with a live count) and filters you can combine.</p>
+  <p class="hint">Click a legacy tab below to see where that work lives now.</p>
+
+  <div class="scroll-wrap">
+    <div class="diagram">
+      <div class="legacy-bar">
+        <div class="legacy-eyebrow-row"><p class="legacy-eyebrow">Old homepage - fixed tabs</p></div>
+        <button class="tab-pill" data-tab="preparing">Preparing</button>
+        <button class="tab-pill" data-tab="review">Review</button>
+        <button class="tab-pill" data-tab="coding">Coding</button>
+        <button class="tab-pill" data-tab="released">Released</button>
+        <button class="tab-pill" data-tab="rejected">Rejected</button>
+      </div>
+
+      <div class="becomes-row">
+        <span class="becomes-chip"><span class="becomes-arrow">&darr;</span> becomes <span class="becomes-arrow">&darr;</span></span>
+      </div>
+
+      <div class="toolbar">
+        <p class="columns-label">Letters page - one list, presets and filters</p>
+        <div class="toolbar-row">
+          <button class="tb-btn" id="btn-filter">Filter</button>
+          <button class="tb-btn" id="btn-columns">Columns</button>
+          <button class="preset-btn" id="preset-mine">My letters</button>
+          <button class="preset-btn" id="preset-preparing">Preparing actions <span class="count">535</span></button>
+          <button class="preset-btn" id="preset-allcoding">All coding <span class="count">62</span></button>
+          <button class="preset-btn" id="preset-unassigned">Unassigned coding <span class="count">19</span></button>
+          <button class="preset-btn" id="preset-needsrejection">Needs rejection <span class="count">5</span></button>
+          <div class="split-btn">
+            <button class="main">Upload</button>
+            <button class="chev">&#9662;</button>
+          </div>
+        </div>
+
+        <p class="columns-label">Columns (example)</p>
+        <div class="column-strip">
+          <span class="col-chip">Patient</span>
+          <span class="col-chip">Status</span>
+          <span class="col-chip">Assigned to</span>
+          <span class="col-chip" id="col-release-date">Release date</span>
+          <span class="col-chip" id="col-rejected-by">Rejected by</span>
+          <span class="col-chip" id="col-rejected-date">Rejected date</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <p class="panel-eyebrow" id="panel-eyebrow">Nothing selected yet</p>
+    <p class="panel-text placeholder" id="panel-text">Click a tab above (Preparing, Review, Coding, Released or Rejected) to see where that work lives now.</p>
+  </div>
+</div>
+
+<script>
+  var MAP = {
+    preparing: {
+      tabLabel: "Preparing",
+      targets: ["preset-preparing"],
+      eyebrow: "PREPARING now lives as...",
+      text: "The <strong>Preparing actions</strong> preset - a saved filter that shows exactly this queue, with a live count on the button itself."
+    },
+    review: {
+      tabLabel: "Review",
+      targets: ["btn-filter", "preset-allcoding"],
+      eyebrow: "REVIEW now lives as...",
+      text: "A <strong>Status filter</strong> for letters needing review, surfaced through the coding presets - open All coding (or Unassigned coding), then filter to Status: Review."
+    },
+    coding: {
+      tabLabel: "Coding",
+      targets: ["preset-allcoding", "preset-unassigned"],
+      eyebrow: "CODING now lives as...",
+      text: "The <strong>All coding</strong> and <strong>Unassigned coding</strong> presets - the same queue, split by whether it's assigned yet."
+    },
+    released: {
+      tabLabel: "Released",
+      targets: ["btn-filter", "col-release-date"],
+      eyebrow: "RELEASED now lives as...",
+      text: "A <strong>Status filter</strong> (Released), plus a <strong>Release date</strong> column so you can see exactly when each letter went out."
+    },
+    rejected: {
+      tabLabel: "Rejected",
+      targets: ["preset-needsrejection", "col-rejected-by", "col-rejected-date"],
+      eyebrow: "REJECTED now lives as...",
+      text: "The <strong>Needs rejection</strong> preset for the ones still to action, plus <strong>Rejected by</strong> and <strong>Rejected date</strong> columns for the ones already handled."
+    }
+  };
+
+  var allTargetIds = [];
+  Object.keys(MAP).forEach(function(k){
+    MAP[k].targets.forEach(function(id){
+      if (allTargetIds.indexOf(id) === -1) allTargetIds.push(id);
+    });
+  });
+
+  function clearHighlights(){
+    allTargetIds.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.classList.remove("highlight");
+    });
+  }
+
+  function selectTab(key){
+    var entry = MAP[key];
+    if (!entry) return;
+
+    document.querySelectorAll(".tab-pill").forEach(function(el){
+      el.classList.toggle("active", el.getAttribute("data-tab") === key);
+    });
+
+    clearHighlights();
+    entry.targets.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.classList.add("highlight");
+    });
+
+    document.getElementById("panel-eyebrow").textContent = entry.eyebrow;
+    var textEl = document.getElementById("panel-text");
+    textEl.classList.remove("placeholder");
+    textEl.innerHTML = entry.text;
+  }
+
+  document.querySelectorAll(".tab-pill").forEach(function(el){
+    el.addEventListener("click", function(){
+      selectTab(el.getAttribute("data-tab"));
+    });
+  });
+</script>

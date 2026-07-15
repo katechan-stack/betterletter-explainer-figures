@@ -1,0 +1,553 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+<title>Reading the Pipeline dashboard</title>
+
+<style>
+  :root{
+    --navy:#011936;
+    --bg:#F4F4F4;
+    --white:#FFFFFF;
+    --accent:#68E7D1;
+    --salmon:#F79CA4;
+    --salmon-border:#E8697A;
+    --subtle:#556D8A;
+    --border:#DEE7EE;
+    --border-strong:#7A8B9F;
+    --node-fill:#E2E8F0;
+    --slate:#64748B;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--navy);
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    font-size:16px;
+    line-height:1.5;
+  }
+
+  .page{
+    max-width:1000px;
+    margin:0 auto;
+    padding:18px 20px 24px;
+  }
+
+  h1{
+    font-size:24px;
+    line-height:32px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+
+  .intro{
+    font-size:16px;
+    line-height:22px;
+    margin:0 0 14px;
+    max-width:80ch;
+  }
+
+  .controls-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:14px;
+  }
+
+  .segmented{
+    display:inline-flex;
+    border:2px solid var(--navy);
+    border-radius:6px;
+    overflow:hidden;
+  }
+
+  .segmented button{
+    appearance:none;
+    border:none;
+    background:var(--white);
+    color:var(--navy);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    padding:8px 16px;
+    min-height:40px;
+    cursor:pointer;
+  }
+
+  .segmented button + button{
+    border-left:2px solid var(--navy);
+  }
+
+  .segmented button.active{
+    background:var(--navy);
+    color:var(--white);
+  }
+
+  .segmented button:focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:-3px;
+  }
+
+  .segmented-note{
+    font-size:14px;
+    color:var(--subtle);
+    margin:0;
+  }
+
+  .legend{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    font-size:15px;
+    color:var(--subtle);
+    margin:0 0 16px;
+    padding:10px 14px;
+    background:var(--white);
+    border:2px solid var(--border);
+    border-radius:6px;
+  }
+
+  .legend-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .legend-swatch{
+    flex:0 0 auto;
+    width:18px;
+    height:18px;
+    border-radius:4px;
+    background:var(--node-fill);
+    border:2px solid var(--border-strong);
+  }
+
+  .legend-line{
+    flex:0 0 auto;
+    width:22px;
+    height:0;
+    border-top:3px solid var(--slate);
+  }
+
+  .scroll-wrap{
+    overflow-x:auto;
+    padding-bottom:6px;
+    margin-bottom:16px;
+  }
+
+  .diagram{
+    min-width:760px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .pipeline-row{
+    display:flex;
+    align-items:flex-start;
+  }
+
+  .branch-indicator{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#C24A5B;
+    font-size:15px;
+    font-weight:700;
+    margin:4px 0 4px 260px;
+  }
+
+  .branch-arrow{
+    font-size:20px;
+    line-height:1;
+  }
+
+  .node-box{
+    flex:0 0 168px;
+    background:var(--node-fill);
+    border:2px solid var(--border-strong);
+    border-radius:8px;
+    padding:10px 12px 12px;
+  }
+
+  .node-box.branch-node{
+    border-color:var(--salmon-border);
+    background:#FCE9EB;
+  }
+
+  .node-header{
+    appearance:none;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+    background:transparent;
+    border:none;
+    padding:0 0 4px;
+    cursor:pointer;
+    font-family:inherit;
+    color:var(--navy);
+  }
+
+  .node-label{
+    font-size:16px;
+    font-weight:700;
+    text-align:left;
+  }
+
+  .chevron{
+    flex:0 0 auto;
+    font-size:14px;
+    transition:transform .12s ease;
+  }
+
+  .node-header[aria-expanded="true"] .chevron{
+    transform:rotate(180deg);
+  }
+
+  .node-header:focus-visible,
+  .node-count:focus-visible,
+  .segmented button:focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  .node-count{
+    appearance:none;
+    background:none;
+    border:none;
+    padding:0;
+    font-family:inherit;
+    font-size:28px;
+    font-weight:700;
+    color:#0A5C7A;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    cursor:pointer;
+  }
+
+  .node-count:hover{
+    color:var(--navy);
+  }
+
+  .node-count.opened{
+    color:var(--navy);
+    background:var(--accent);
+    padding:0 6px;
+    border-radius:4px;
+    text-decoration:none;
+  }
+
+  .node-expand{
+    display:none;
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--border-strong);
+  }
+
+  .node-expand.visible{
+    display:block;
+  }
+
+  .split-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:14px;
+    padding:2px 0;
+  }
+
+  .split-row .split-label{
+    color:var(--subtle);
+  }
+
+  .split-row .split-value{
+    font-weight:700;
+  }
+
+  .connector{
+    flex:0 0 76px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    padding-top:26px;
+    min-width:60px;
+  }
+
+  .connector-label{
+    font-size:15px;
+    font-weight:700;
+    color:var(--slate);
+  }
+
+  .connector-label.teal-label{
+    color:#0A6E5E;
+  }
+
+  .connector-arrow{
+    position:relative;
+    width:100%;
+    height:3px;
+    background:var(--slate);
+  }
+
+  .connector-arrow::after{
+    content:"";
+    position:absolute;
+    right:-1px;
+    top:50%;
+    transform:translateY(-50%);
+    width:0;
+    height:0;
+    border-top:5px solid transparent;
+    border-bottom:5px solid transparent;
+    border-left:7px solid var(--slate);
+  }
+
+  .connector-arrow.teal{
+    background:#3BC7AE;
+  }
+
+  .connector-arrow.teal::after{
+    border-left-color:#3BC7AE;
+  }
+
+  .connector-arrow.salmon{
+    background:var(--salmon-border);
+  }
+
+  .connector-arrow.salmon::after{
+    border-left-color:var(--salmon-border);
+  }
+
+  .callout-card{
+    background:var(--white);
+    border:2px solid var(--border);
+    border-radius:8px;
+    padding:14px 18px 16px;
+  }
+
+  .callout-eyebrow{
+    font-size:14px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    color:var(--subtle);
+    margin:0 0 4px;
+  }
+
+  .callout-text{
+    font-size:17px;
+    line-height:24px;
+    margin:0;
+  }
+
+  .callout-text.placeholder{
+    color:var(--subtle);
+  }
+
+  .affordance-note{
+    font-size:15px;
+    line-height:22px;
+    color:var(--subtle);
+    margin:10px 0 0;
+  }
+
+  .affordance-note strong{
+    color:var(--navy);
+  }
+</style>
+
+<div class="page">
+  <h1>Reading the Pipeline dashboard</h1>
+  <p class="intro">The Pipeline dashboard is a live diagram of every letter in the practice, from upload to release or rejection. Boxes are stages, lines are the automatic moves between them.</p>
+
+  <div class="controls-row">
+    <div class="segmented" id="range-toggle">
+      <button data-range="day">Day</button>
+      <button data-range="week">Week</button>
+      <button class="active" data-range="month">Month</button>
+    </div>
+    <p class="segmented-note">Illustrative only - the numbers below don't change with this toggle.</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-swatch"></span> Box = a stage needing human action, or an endpoint</div>
+    <div class="legend-item"><span class="legend-line"></span> Line = an automatic transition; its label is how many letters flowed</div>
+  </div>
+
+  <div class="scroll-wrap">
+    <div class="diagram">
+      <div class="pipeline-row" id="main-row">
+        <div class="node-box" data-node="input">
+          <button class="node-header" data-toggle="input" aria-expanded="false">
+            <span class="node-label">Input</span>
+            <span class="chevron">&#9662;</span>
+          </button>
+          <button class="node-count" data-count="input">7</button>
+          <div class="node-expand" data-expand="input">
+            <div class="split-row"><span class="split-label">BetterLetter</span><span class="split-value">4</span></div>
+            <div class="split-row"><span class="split-label">Practice</span><span class="split-value">3</span></div>
+          </div>
+        </div>
+
+        <div class="connector">
+          <span class="connector-label">12</span>
+          <div class="connector-arrow"></div>
+        </div>
+
+        <div class="node-box" data-node="preparing">
+          <button class="node-header" data-toggle="preparing" aria-expanded="false">
+            <span class="node-label">Preparing actions</span>
+            <span class="chevron">&#9662;</span>
+          </button>
+          <button class="node-count" data-count="preparing">535</button>
+          <div class="node-expand" data-expand="preparing">
+            <div class="split-row"><span class="split-label">BetterLetter</span><span class="split-value">401</span></div>
+            <div class="split-row"><span class="split-label">Practice</span><span class="split-value">134</span></div>
+          </div>
+        </div>
+
+        <div class="connector">
+          <span class="connector-label">23</span>
+          <div class="connector-arrow"></div>
+        </div>
+
+        <div class="node-box" data-node="review">
+          <button class="node-header" data-toggle="review" aria-expanded="false">
+            <span class="node-label">Review</span>
+            <span class="chevron">&#9662;</span>
+          </button>
+          <button class="node-count" data-count="review">62</button>
+          <div class="node-expand" data-expand="review">
+            <div class="split-row"><span class="split-label">BetterLetter</span><span class="split-value">43</span></div>
+            <div class="split-row"><span class="split-label">Practice</span><span class="split-value">19</span></div>
+          </div>
+        </div>
+
+        <div class="connector">
+          <span class="connector-label teal-label">23</span>
+          <div class="connector-arrow teal"></div>
+        </div>
+
+        <div class="node-box" data-node="released">
+          <button class="node-header" data-toggle="released" aria-expanded="false">
+            <span class="node-label">Released</span>
+            <span class="chevron">&#9662;</span>
+          </button>
+          <button class="node-count" data-count="released">1</button>
+          <div class="node-expand" data-expand="released">
+            <div class="split-row"><span class="split-label">BetterLetter</span><span class="split-value">1</span></div>
+            <div class="split-row"><span class="split-label">Practice</span><span class="split-value">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="branch-indicator">
+        <span class="branch-arrow">&#8627;</span>
+        <span>Branches off Preparing actions / Review when a letter needs manual rejection</span>
+      </div>
+
+      <div class="pipeline-row" id="branch-row">
+        <div class="node-box branch-node" data-node="manual">
+          <button class="node-header" data-toggle="manual" aria-expanded="false">
+            <span class="node-label">Manual rejection needed</span>
+            <span class="chevron">&#9662;</span>
+          </button>
+          <button class="node-count" data-count="manual">5</button>
+          <div class="node-expand" data-expand="manual">
+            <div class="split-row"><span class="split-label">BetterLetter</span><span class="split-value">3</span></div>
+            <div class="split-row"><span class="split-label">Practice</span><span class="split-value">2</span></div>
+          </div>
+        </div>
+
+        <div class="connector">
+          <div class="connector-arrow salmon"></div>
+        </div>
+
+        <div class="node-box branch-node" data-node="rejected">
+          <button class="node-header" data-toggle="rejected" aria-expanded="false">
+            <span class="node-label">Rejected</span>
+            <span class="chevron">&#9662;</span>
+          </button>
+          <button class="node-count" data-count="rejected">0</button>
+          <div class="node-expand" data-expand="rejected">
+            <div class="split-row"><span class="split-label">BetterLetter</span><span class="split-value">0</span></div>
+            <div class="split-row"><span class="split-label">Practice</span><span class="split-value">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-card">
+    <p class="callout-eyebrow" id="callout-eyebrow">Click a count</p>
+    <p class="callout-text placeholder" id="callout-text">Click one of the underlined numbers above to preview what it opens.</p>
+  </div>
+
+  <p class="affordance-note">Two different things you can click: a <strong>count number</strong> (underlined, like a link) drills through to the Letters page filtered to that stage. A node's <strong>label or chevron</strong> expands it in place to show the BetterLetter / Practice source split.</p>
+</div>
+
+<script>
+  var DRILL = {
+    input: "opens the Letters page filtered to Input - uploaded, not yet actioned.",
+    preparing: "opens the Letters page filtered to the Preparing actions preset.",
+    review: "opens the Letters page filtered to letters awaiting annotation/review.",
+    released: "opens the Letters page filtered to Status: Released.",
+    manual: "opens the Letters page filtered to Needs rejection.",
+    rejected: "opens the Letters page filtered to Status: Rejected."
+  };
+
+  var NODE_NAME = {
+    input: "Input (7)",
+    preparing: "Preparing actions (535)",
+    review: "Review (62)",
+    released: "Released (1)",
+    manual: "Manual rejection needed (5)",
+    rejected: "Rejected (0)"
+  };
+
+  document.querySelectorAll(".node-header").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var key = btn.getAttribute("data-toggle");
+      var expand = document.querySelector('[data-expand="' + key + '"]');
+      var isOpen = expand.classList.contains("visible");
+      expand.classList.toggle("visible", !isOpen);
+      btn.setAttribute("aria-expanded", String(!isOpen));
+    });
+  });
+
+  document.querySelectorAll(".node-count").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var key = btn.getAttribute("data-count");
+
+      document.querySelectorAll(".node-count").forEach(function(b){
+        b.classList.remove("opened");
+      });
+      btn.classList.add("opened");
+
+      document.getElementById("callout-eyebrow").textContent = NODE_NAME[key] + " →";
+      var textEl = document.getElementById("callout-text");
+      textEl.classList.remove("placeholder");
+      textEl.textContent = DRILL[key];
+    });
+  });
+
+  document.querySelectorAll("#range-toggle button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll("#range-toggle button").forEach(function(b){
+        b.classList.remove("active");
+      });
+      btn.classList.add("active");
+    });
+  });
+</script>

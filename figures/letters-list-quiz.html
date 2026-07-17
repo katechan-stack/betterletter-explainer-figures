@@ -411,20 +411,20 @@
       type: "open",
       short: "Old homepage and its downside",
       q: "What did the BetterLetter homepage look like before this project, and what was the main downside?",
-      a: "The workflow was split across separate tabs (Preparing, Review, Coding, Released, Rejected) worked one at a time; the list lacked the columns and filters coders needed (you'd “select all” just to count), and it could take up to around 20 seconds to load."
+      a: "The homepage was the workflow tabs (Preparing, Review, Coding, Released, Rejected), worked one at a time - one queue split across many screens, with loads of up to around 20 seconds. The unfinished Letters (beta) page alongside it lacked the columns and filters coders needed - there, you'd “select all” just to count a filtered view."
     },
     {
       type: "mc",
       short: "Box vs line on the dashboard",
       q: "On the dashboard, what's the difference between a box and a line?",
       options: [
-        "Boxes are stages needing human action or endpoints; lines are automatic transitions labelled with how many letters flowed",
-        "Boxes are for coders, lines for managers",
-        "Boxes are clickable, lines are decorative",
-        "No difference, just styling"
+        "Boxes are stages needing human action or endpoints; lines are automatic steps, labelled with the number of letters currently in them",
+        "Boxes show live snapshots; lines show how many letters flowed through during the selected day, week or month",
+        "Boxes are the stages a coder owns; lines are the stages BetterLetter handles for the practice",
+        "Boxes link into the Letters page; lines are visual connectors with no data on them"
       ],
       correctIndex: 0,
-      explanation: "Boxes = human-action / endpoint states with a count. Lines = automatic transitions with a flow count."
+      explanation: "Boxes = human-action / endpoint stages with a count. Lines = automatic steps; the label is how many letters are sitting in that step right now, not a count of past flow."
     },
     {
       type: "mc",
@@ -432,9 +432,9 @@
       q: "Why is rejecting an in-app uploaded letter done manually rather than through Docman?",
       options: [
         "There's no Docman file behind an in-app upload, so there's nothing for Docman to move",
-        "Docman is being retired",
-        "Coders prefer it",
-        "EMIS doesn't support rejection"
+        "Docman is being phased out, so rejection is moving in-app for every practice",
+        "Coders asked for an in-app rejection flow because the Docman one was too slow",
+        "EMIS practices don't support rejection through Docman, and uploads follow the EMIS rules"
       ],
       correctIndex: 0,
       explanation: "In-app uploads have no Docman file, so rejection is manual in the app."
@@ -444,13 +444,13 @@
       short: "Who each surface is built for",
       q: "Who is the Pipeline dashboard primarily built for, and who is the Letters page for?",
       options: [
-        "Dashboard for practice managers / coding team leads; Letters page for coders",
-        "Both for coders only",
-        "Dashboard for coders, Letters for managers",
-        "Both for GPs"
+        "The dashboard is built for practice managers and coding team leads; the Letters page is where coders work - and managers use it too, e.g. bulk-assigning letters",
+        "The dashboard is where coders pick their next letter; the Letters page is the managers' reporting view",
+        "Both screens are built for GPs, who need to check clinical risk before letters are filed",
+        "The dashboard is for the BetterLetter team; practice staff only ever see the Letters page"
       ],
       correctIndex: 0,
-      explanation: "The dashboard is the manager/lead overview (everyone lands on it, but it's built for them); the Letters page is the coder's working surface."
+      explanation: "The dashboard answers the manager's “state of the pipeline” question (everyone lands on it). The Letters page is the coder's daily surface, but managers and team leads work it too - bulk assign lives there."
     },
     {
       type: "open",
@@ -499,18 +499,24 @@
   function renderOptions(item){
     var list = document.getElementById('options-list');
     list.innerHTML = '';
-    item.options.forEach(function(optionText, i){
+    var order = item.options.map(function(_, i){ return i; });
+    for (var i = order.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+    }
+    order.forEach(function(originalIndex){
       var li = document.createElement('li');
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'option-btn';
+      btn.dataset.optionIndex = originalIndex;
 
       var label = document.createElement('span');
       label.className = 'option-label';
-      label.textContent = optionText;
+      label.textContent = item.options[originalIndex];
       btn.appendChild(label);
 
-      btn.addEventListener('click', function(){ selectOption(item, i); });
+      btn.addEventListener('click', function(){ selectOption(item, originalIndex); });
       li.appendChild(btn);
       list.appendChild(li);
     });
@@ -520,7 +526,8 @@
     var buttons = document.querySelectorAll('#options-list .option-btn');
     var isCorrectFirstClick = (chosenIndex === item.correctIndex);
 
-    buttons.forEach(function(btn, i){
+    buttons.forEach(function(btn){
+      var i = parseInt(btn.dataset.optionIndex, 10);
       btn.disabled = true;
       if (i === chosenIndex && i === item.correctIndex){
         btn.classList.add('correct');

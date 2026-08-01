@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pulse Dashboard V0 - BetterLetter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#011936;
+    --bg:#F4F4F4;
+    --white:#FFFFFF;
+    --border:#DEE7EE;
+    --subtle-border:#7A8B9F;
+    --subtle-text:#556D8A;
+    --bar-fill:#7A8A9F;
+    --teal:#68E7D1;
+    --salmon:#F79CA4;
+    --pulse-shadow:0 4px 24px rgba(1,25,54,0.24);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    background:var(--bg);
+    color:var(--navy);
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+    height:100vh; overflow:hidden;
+  }
+  button, input{ font-family:inherit; }
+  a{ color:inherit; }
+
+  /* ============================================================
+     PRESENTER BAR (outside the canvas / test area)
+     ============================================================ */
+  .presenter-bar{
+    flex:0 0 48px; height:48px;
+    background:#fff; border-bottom:1px dashed var(--subtle-border);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px;
+  }
+  .presenter-label{
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--subtle-text);
+  }
+  .presenter-controls{ display:flex; align-items:center; gap:8px; }
+  .presenter-controls button{
+    font-size:13px; padding:6px 12px; border:1px solid var(--subtle-border); border-radius:4px;
+    background:#fff; color:var(--navy); cursor:pointer;
+  }
+  .presenter-controls button.dc-reset{ color:var(--subtle-text); border-style:dashed; }
+  .presenter-controls button:hover{ background:#eef2f5; }
+  .presenter-controls button:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+
+  /* ============================================================
+     STAGE (scales the fixed 1440x1024 canvas to fit the viewport)
+     ============================================================ */
+  .stage{
+    flex:1 1 auto; position:relative; overflow:hidden;
+  }
+  .canvas{
+    width:1440px; height:1024px;
+    position:absolute; top:0; left:50%; margin-left:-720px;
+    background:#fff;
+    overflow:hidden;
+    box-shadow:0 4px 24px rgba(1,25,54,0.14);
+    transform-origin: top center;
+  }
+
+  /* ---------- focus ---------- */
+  .canvas *:focus-visible{
+    outline:2px solid var(--teal);
+    outline-offset:2px;
+    border-radius:4px;
+  }
+
+  /* ============================================================
+     LETTERS LIST BACKGROUND (shared chrome)
+     ============================================================ */
+  .list-bg{ position:absolute; inset:0; z-index:1; }
+
+  /* --- top header --- */
+  .top-header{
+    position:absolute; top:0; left:0; right:0; height:56px;
+    background:#fff; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px;
+  }
+  .left-group{ display:flex; align-items:center; gap:16px; }
+  .right-group{ display:flex; align-items:center; gap:16px; }
+
+  .logo{
+    border:2px solid var(--navy); border-radius:8px;
+    padding:6px 12px; font-weight:700; font-size:15px;
+    letter-spacing:0.02em; color:var(--navy); white-space:nowrap;
+  }
+
+  .nav-pill{
+    display:flex; align-items:center; height:40px;
+    border:1px solid var(--border); border-radius:8px;
+    background:#fff; overflow:hidden;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:6px; height:100%;
+    padding:0 14px; font-size:16px; font-weight:700; color:var(--navy);
+    background:transparent; border:none; cursor:default;
+  }
+  .nav-item.active{ background:rgba(1,25,54,0.07); }
+  .nav-item .ic{ display:flex; }
+  .nav-item.active .ic{ color:var(--teal); }
+  .nav-item:not(.active) .ic{ color:var(--navy); }
+
+  .pulse-pill{
+    display:flex; align-items:center; gap:8px; height:40px;
+    padding:0 12px 0 14px; border:1px solid var(--border); border-radius:8px;
+    background:#fff; cursor:pointer; transition:background .12s ease;
+  }
+  .pulse-pill:hover{ background:#f2f6f9; }
+  .pulse-pill.interrupted{ background:var(--salmon); border-color:var(--salmon); }
+  .pulse-pill.interrupted:hover{ background:#f58ea0; }
+  .pulse-pill .p-text{ font-size:16px; font-weight:700; color:var(--navy); }
+  .pulse-pill .p-ic{ display:flex; color:var(--navy); }
+  .pulse-expand{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--navy);
+  }
+
+  .practice-select{
+    width:358px; height:40px; border:1px solid var(--subtle-border);
+    border-radius:6px; background:#fff;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 12px; font-size:16px; color:var(--navy);
+  }
+  .account-btn{
+    width:40px; height:40px; border-radius:50%;
+    border:1px solid var(--subtle-border); background:#fff;
+    display:flex; align-items:center; justify-content:center; color:var(--navy);
+  }
+
+  /* --- mailroom ribbon --- */
+  .ribbon{
+    position:absolute; top:56px; left:0; right:0; height:48px;
+    background:var(--navy); display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px;
+  }
+  .ribbon .left, .ribbon .right{ display:flex; align-items:center; gap:8px; }
+  .rbtn{
+    display:flex; align-items:center; gap:6px; height:32px; padding:0 12px;
+    border:1px solid rgba(255,255,255,0.25); border-radius:6px;
+    background:transparent; color:#fff; font-size:16px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.03em; cursor:pointer;
+  }
+  .rbtn:hover{ background:rgba(255,255,255,0.08); }
+  .rdivider{ width:1px; height:20px; background:rgba(255,255,255,0.15); }
+  .rchip{
+    height:32px; padding:0 12px; display:flex; align-items:center;
+    border-radius:6px; font-size:16px; font-weight:700; color:#fff;
+    border:1px solid rgba(255,255,255,0.25); background:var(--navy); white-space:nowrap;
+  }
+  .rchip.active{ background:var(--teal); color:var(--navy); border-color:transparent; }
+  .rchip.filter-chip{ display:none; gap:8px; }
+  .rchip.filter-chip.show{ display:flex; }
+  .chip-clear{
+    background:none; border:none; color:var(--navy); font-size:14px;
+    line-height:1; cursor:pointer; padding:0;
+  }
+
+  /* --- letters table --- */
+  .table-area{ position:absolute; top:104px; left:0; right:0; bottom:0; background:#fff; overflow:hidden; }
+  .table-toolbar{
+    height:48px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px; border-bottom:1px solid var(--border);
+  }
+  .tt-left{ display:flex; align-items:center; gap:8px; font-size:16px; }
+  .tt-left input[type=checkbox]{ width:16px; height:16px; accent-color:var(--navy); }
+  .tt-right{ display:flex; align-items:center; gap:14px; }
+  .tt-count{ font-size:16px; color:var(--subtle-text); }
+  .stbtn{
+    height:32px; padding:0 14px; border:2px solid var(--navy); border-radius:4px;
+    background:#fff; color:var(--navy); font-weight:700; font-size:16px;
+    text-transform:uppercase; letter-spacing:0.03em; display:flex; align-items:center; gap:6px;
+    opacity:0.55; cursor:not-allowed;
+  }
+
+  .results-line{
+    display:none; padding:8px 32px; font-size:14px; color:var(--subtle-text);
+    border-bottom:1px solid var(--border);
+  }
+  .empty-state{
+    display:none; padding:24px 32px; font-size:16px; color:var(--navy);
+  }
+
+  .row-grid{
+    display:grid;
+    grid-template-columns: 40px 74px 110px 128px 128px 116px 220px 160px 70px 1fr;
+    align-items:center; column-gap:8px;
+    padding:0 32px;
+  }
+  .col-header-row{
+    height:40px; border-bottom:1px solid var(--border);
+    font-size:16px; font-weight:700; color:var(--navy);
+  }
+  .col-header-row .ch{ display:flex; align-items:center; gap:4px; }
+  .col-header-row .ch svg{ opacity:0.6; }
+  .data-row{ height:34px; border-bottom:1px solid var(--border); font-size:16px; color:var(--navy); }
+  .data-row .dc{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .data-row input[type=checkbox]{ width:16px; height:16px; accent-color:var(--navy); }
+  .rows-scroll{ overflow:hidden; height:100%; }
+
+  /* ============================================================
+     SCRIM
+     ============================================================ */
+  .scrim{
+    position:absolute; inset:0; z-index:20;
+    background:rgba(1,25,54,0.5);
+    display:none;
+  }
+  .scrim.open{ display:block; }
+
+  /* ============================================================
+     DAILY PULSE POPOVER — grey card, white row-pills
+     ============================================================ */
+  .popover{
+    position:absolute; top:60px; width:369px;
+    background:var(--bg); border-radius:8px; padding:16px;
+    display:none; flex-direction:column; gap:8px;
+    box-shadow:var(--pulse-shadow);
+    z-index:30;
+  }
+  .popover.open{ display:flex; }
+  .popover-header{
+    display:flex; align-items:center; gap:8px;
+    font-size:20px; font-weight:400; color:var(--navy);
+  }
+  .popover-header .p-ic{ display:flex; color:var(--navy); }
+  .pill-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border-radius:8px; padding:4px 8px;
+  }
+  .pill-row .pl{ font-size:16px; font-weight:400; color:var(--navy); }
+  .pill-row .pv{ font-size:24px; font-weight:400; color:var(--navy); }
+  .pill-row.status.interrupted{ background:var(--salmon); }
+  .pill-row.link{ cursor:pointer; transition:background .1s ease; }
+  .pill-row.link:hover{ background:#eef2f5; }
+
+  /* ============================================================
+     FULL PULSE MODAL — transparent wrapper, floating cards
+     ============================================================ */
+  .pulse-wrap{
+    position:absolute; left:160px; top:247px; width:1120px;
+    display:none; flex-direction:column; gap:20px;
+    z-index:40;
+  }
+  .pulse-wrap.open{ display:flex; }
+
+  .header-card{
+    background:#fff; border-radius:8px; padding:16px;
+    box-shadow:var(--pulse-shadow);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-title{
+    display:flex; align-items:center; gap:8px;
+    font-size:24px; line-height:32px; font-weight:400; color:var(--navy);
+  }
+  .modal-title .ic{ display:flex; color:var(--navy); flex:0 0 auto; }
+
+  .period-toggle{ display:flex; width:300px; height:32px; }
+  .period-seg{
+    width:100px; height:32px; padding:4px 8px;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+    font-size:16px; font-weight:400; color:var(--navy);
+    background:transparent; border:1px solid var(--navy);
+    cursor:pointer; font-family:inherit;
+  }
+  .period-seg:first-child{ border-top-left-radius:8px; border-bottom-left-radius:8px; }
+  .period-seg:last-child{ border-top-right-radius:8px; border-bottom-right-radius:8px; }
+  .period-seg .chk{ display:none; color:var(--teal); }
+  .period-seg.active{ background:var(--navy); color:#fff; }
+  .period-seg.active .chk{ display:flex; }
+  .period-seg:hover:not(.active){ background:rgba(1,25,54,0.05); }
+
+  .detail-row{ display:flex; gap:20px; }
+  .col-left{ flex:1 1 auto; display:flex; flex-direction:column; gap:20px; }
+  .col-right{ width:489px; flex:0 0 489px; }
+
+  .tile{
+    background:#fff; border-radius:8px; padding:16px;
+    box-shadow:var(--pulse-shadow);
+    overflow:clip;
+  }
+
+  .tile-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+  .tile-head .t-title{ font-size:16px; font-weight:400; color:var(--navy); }
+  .tile-head .t-total{ font-size:24px; font-weight:400; color:var(--navy); text-decoration:underline; }
+
+  .group-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+  .group-head .g-title{ font-size:16px; font-weight:400; color:var(--navy); }
+  .group-head .g-total{ font-size:20px; font-weight:400; color:var(--navy); text-decoration:underline; }
+
+  .rows-list{ display:flex; flex-direction:column; gap:16px; }
+
+  .row-hotspot{
+    cursor:pointer; border-radius:6px; padding:5px 8px; margin:-5px -8px;
+    transition:background .1s ease;
+  }
+  .row-hotspot:hover{ background:rgba(1,25,54,0.045); }
+  .row-hotspot:hover .row-value, .row-hotspot:hover .g-total, .row-hotspot:hover .t-total{ text-decoration-thickness:2px; }
+
+  /* Title-level hotspots (tile titles + group headers) only: the .row-hotspot shorthand
+     margin above silently overrode the 16px margin-bottom declared on .tile-head/.group-head
+     (same specificity, later in source), collapsing it to -5px and causing adjacent hover
+     highlights to touch/overlap. Restore the intended gap and give title-level hovers their
+     own colour, without touching the shared .row-hotspot rule the per-row bar hotspots use. */
+  .tile-head.row-hotspot,
+  .group-head.row-hotspot{
+    margin-bottom:16px;
+  }
+  .tile-head.row-hotspot:hover,
+  .group-head.row-hotspot:hover{
+    background:#CEEBFF;
+  }
+
+  .row-top{ display:flex; justify-content:space-between; align-items:center; }
+  .row-label{ font-size:14px; font-weight:400; color:var(--navy); }
+  .row-value{ font-size:14px; font-weight:400; color:var(--navy); text-decoration:underline; }
+
+  .bar{ height:16px; border-radius:4px; margin-top:4px; }
+
+  .tile-divider{ height:1px; background:var(--border); margin:16px 0; }
+</style>
+</head>
+<body>
+
+<div class="presenter-bar">
+  <span class="presenter-label">Presenter controls - for the call</span>
+  <div class="presenter-controls">
+    <button id="dcOnline">Online</button>
+    <button id="dcInterrupted">Interrupted</button>
+    <button id="dcReset" class="dc-reset">Reset</button>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="canvas" id="canvas">
+
+    <!-- ============ LETTERS LIST BACKGROUND ============ -->
+    <div class="list-bg">
+
+      <!-- top header -->
+      <div class="top-header">
+        <div class="left-group">
+          <div class="logo">BetterLetter</div>
+
+          <div class="nav-pill">
+            <div class="nav-item active">
+              <span class="ic">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Coding
+            </div>
+            <div class="nav-item">
+              <span class="ic">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z" stroke-linejoin="round"/></svg>
+              </span>
+              Tasks
+            </div>
+          </div>
+
+          <div class="pulse-pill" id="pulsePill" tabindex="0" role="button" aria-label="Open full Pulse dashboard. Hover for a quick summary." title="Open full Pulse dashboard">
+            <span class="p-ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13 2Z"/></svg>
+            </span>
+            <span class="p-text">Daily Pulse</span>
+            <span class="pulse-expand" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 10L10 6M6 6h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="right-group">
+          <div class="practice-select">
+            Lee Valley GP
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="account-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- mailroom ribbon -->
+      <div class="ribbon">
+        <div class="left">
+          <button class="rbtn">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4z" stroke-linejoin="round"/></svg>
+            Filter
+          </button>
+          <button class="rbtn">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="4" height="12" rx="1"/><rect x="8" y="4" width="4" height="12" rx="1"/><rect x="13" y="4" width="4" height="12" rx="1"/></svg>
+            Columns
+          </button>
+          <div class="rdivider"></div>
+          <div class="rchip active" id="allLettersChip">All letters (21092)</div>
+          <div class="rchip filter-chip" id="filterChip">
+            <span id="filterChipLabel"></span>
+            <button class="chip-clear" id="filterClearBtn" aria-label="Clear filter" title="Clear filter">&#10005;</button>
+          </div>
+          <div class="rchip">My letters (13)</div>
+          <div class="rchip">Team review - 15pm (2)</div>
+        </div>
+        <div class="right">
+          <div class="rdivider"></div>
+          <button class="rbtn">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 13V3M10 3L6 7M10 3l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke-linecap="round"/></svg>
+            Upload
+          </button>
+        </div>
+      </div>
+
+      <!-- letters table -->
+      <div class="table-area">
+        <div class="table-toolbar">
+          <div class="tt-left">
+            <input type="checkbox">
+            <span>Select all</span>
+          </div>
+          <div class="tt-right">
+            <span class="tt-count">0 letters selected</span>
+            <button class="stbtn">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="7" r="3"/><path d="M2 17c.8-3 3-5 6-5s5.2 2 6 5" stroke-linecap="round"/><path d="M16 6v4M14 8h4" stroke-linecap="round"/></svg>
+              Assign
+            </button>
+            <button class="stbtn">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h11l-3-3M17 14H6l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Redirect
+            </button>
+          </div>
+        </div>
+
+        <div class="results-line" id="resultsLine"></div>
+        <div class="empty-state" id="emptyState"></div>
+
+        <div class="rows-scroll">
+          <div class="row-grid col-header-row">
+            <div class="ch"></div>
+            <div class="ch">ID <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">NHS NO <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">UPLOAD DATE <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">LETTER DATE <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">PRACTICE <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">DEPARTMENT</div>
+            <div class="ch">LETTER TYPE</div>
+            <div class="ch">PAGES</div>
+            <div class="ch">ASSIGNED</div>
+          </div>
+
+          <div id="tableRows"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SCRIM ============ -->
+    <div class="scrim" id="scrim"></div>
+
+    <!-- ============ DAILY PULSE POPOVER ============ -->
+    <div class="popover" id="popover">
+      <div class="popover-header">
+        <span class="p-ic">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13 2Z"/></svg>
+        </span>
+        <span>Daily pulse for 28 July</span>
+      </div>
+      <div class="pill-row link" id="povInputRow" tabindex="0" role="link" title="View input letters on demo.betterletter.ai">
+        <span class="pl">Input letters</span>
+        <span class="pv" id="povInput">200</span>
+      </div>
+      <div class="pill-row link" id="povPipelineRow" tabindex="0" role="link" title="View pipeline on demo.betterletter.ai">
+        <span class="pl">Pipeline</span>
+        <span class="pv" id="povPipeline">50</span>
+      </div>
+      <div class="pill-row link" id="povCompletedRow" tabindex="0" role="link" title="View completed letters on demo.betterletter.ai">
+        <span class="pl">Completed letters</span>
+        <span class="pv" id="povCompleted">150</span>
+      </div>
+      <div class="pill-row status" id="povStatusRow">
+        <span class="pl">System status</span>
+        <span class="pv" id="povStatus">Online</span>
+      </div>
+    </div>
+
+    <!-- ============ FULL PULSE MODAL ============ -->
+    <div class="pulse-wrap" id="modalCard" role="dialog" aria-label="Pulse dashboard">
+      <div class="header-card">
+        <div class="modal-title">
+          <span class="ic">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13 2Z"/></svg>
+          </span>
+          <span id="modalTitle">Daily Pulse for 24 July</span>
+        </div>
+        <div class="period-toggle">
+          <button class="period-seg" data-period="day">
+            <span class="chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Day
+          </button>
+          <button class="period-seg" data-period="week">
+            <span class="chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Week
+          </button>
+          <button class="period-seg" data-period="month">
+            <span class="chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Month
+          </button>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <div class="col-left">
+          <div class="tile">
+            <div class="tile-head row-hotspot" id="inputHead" tabindex="0" role="link" title="View input letters on demo.betterletter.ai">
+              <span class="t-title" id="inputTitle">Daily input</span>
+              <span class="t-total" id="inputTotal">200</span>
+            </div>
+            <div class="rows-list" id="inputRows"></div>
+          </div>
+          <div class="tile">
+            <div class="tile-head row-hotspot" id="completedHead" tabindex="0" role="link" title="View completed letters on demo.betterletter.ai">
+              <span class="t-title" id="completedTitle">Daily completed letters</span>
+              <span class="t-total" id="completedTotal">150</span>
+            </div>
+            <div class="rows-list" id="completedRows"></div>
+          </div>
+        </div>
+
+        <div class="col-right">
+          <div class="tile">
+            <div class="tile-head row-hotspot" id="pipelineHead" tabindex="0" role="link" title="View pipeline on demo.betterletter.ai">
+              <span class="t-title">Currently in pipeline</span>
+              <span class="t-total" id="pipelineTotal">50</span>
+            </div>
+            <div class="group-head row-hotspot" id="needsActionHead" tabindex="0" role="link" title="View items needing action on demo.betterletter.ai">
+              <span class="g-title">Needs action from your team</span>
+              <span class="g-total" id="needsActionTotal">20</span>
+            </div>
+            <div class="rows-list" id="needsActionRows"></div>
+            <div class="tile-divider"></div>
+            <div class="group-head row-hotspot" id="everythingHead" tabindex="0" role="link" title="View automatic pipeline on demo.betterletter.ai">
+              <span class="g-title">Everything else</span>
+              <span class="g-total" id="everythingTotal">30</span>
+            </div>
+            <div class="rows-list" id="everythingRows"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* ---------------- data ---------------- */
+  var DATA = {
+    day: {
+      title: "Daily Pulse for 24 July",
+      inputTitle: "Daily input",
+      completedTitle: "Daily completed letters",
+      input: { total: 200, rows: [
+        { label:"Docman", value:110, pct:55 },
+        { label:"Email", value:0, pct:0 },
+        { label:"Manual upload", value:30, pct:15 },
+        { label:"MESH", value:60, pct:30 }
+      ]},
+      completed: { total:150, rows: [
+        { label:"Released", value:140, pct:93.3 },
+        { label:"Rejected", value:10, pct:6.7 }
+      ]},
+      pipeline: {
+        total:50,
+        needsActionTotal:20,
+        needsAction: [
+          { label:"Needs patient matching", value:0, pct:0 },
+          { label:"Needs review", value:20, pct:100 },
+          { label:"Needs rejection", value:0, pct:0 }
+        ],
+        everythingTotal:30,
+        everything: [
+          { label:"Preparing", value:20, pct:57 },
+          { label:"Review", value:9, pct:10 },
+          { label:"Coding", value:1, pct:10 }
+        ]
+      }
+    },
+    week: {
+      title: "Weekly Pulse for 20 - 26 July",
+      inputTitle: "Weekly input",
+      completedTitle: "Weekly completed letters",
+      input: { total:7000, rows: [
+        { label:"Docman", value:4000, pct:55 },
+        { label:"Email", value:0, pct:0 },
+        { label:"Manual upload", value:1000, pct:15 },
+        { label:"MESH", value:2000, pct:30 }
+      ]},
+      completed: { total:4000, rows: [
+        { label:"Released", value:6000, pct:55 },
+        { label:"Rejected", value:600, pct:12 }
+      ]},
+      pipeline: {
+        total:3000,
+        needsActionTotal:20,
+        needsAction: [
+          { label:"Needs patient matching", value:0, pct:0 },
+          { label:"Needs review", value:20, pct:100 },
+          { label:"Needs rejection", value:0, pct:0 }
+        ],
+        everythingTotal:2980,
+        everything: [
+          { label:"Preparing", value:2000, pct:57 },
+          { label:"Review", value:900, pct:10 },
+          { label:"Coding", value:80, pct:10 }
+        ]
+      }
+    },
+    month: {
+      title: "Monthly Pulse for July 2026",
+      inputTitle: "Monthly input",
+      completedTitle: "Monthly completed letters",
+      input: { total:28000, rows: [
+        { label:"Docman", value:4000, pct:55 },
+        { label:"Email", value:0, pct:0 },
+        { label:"Manual upload", value:1000, pct:15 },
+        { label:"MESH", value:2000, pct:30 }
+      ]},
+      completed: { total:19000, rows: [
+        { label:"Released", value:17003, pct:55 },
+        { label:"Rejected", value:1997, pct:12 }
+      ]},
+      pipeline: {
+        total:9000,
+        needsActionTotal:6020,
+        needsAction: [
+          { label:"Needs patient matching", value:6000, pct:67 },
+          { label:"Needs review", value:8, pct:5 },
+          { label:"Needs rejection", value:12, pct:6 }
+        ],
+        everythingTotal:2980,
+        everything: [
+          { label:"Preparing", value:2000, pct:57 },
+          { label:"Review", value:900, pct:10 },
+          { label:"Coding", value:80, pct:10 }
+        ]
+      }
+    }
+  };
+
+  var POPOVER = {
+    online:      { input:200, pipeline:50,  completed:150,  status:"Online" },
+    interrupted: { input:200, pipeline:400, completed:6600, status:"Interrupted" }
+  };
+
+  var TABLE_ROWS = [
+    ["4335","-","Clinic Letter","1","Derek H…"],
+    ["4336","Maternity","-","2","Thomas…"],
+    ["4337","Maternity","Clinic Letter","1","Derek H…"],
+    ["4338","Dermatology","Clinic Letter","3","Dr. Alan…"],
+    ["4339","Maternity","Clinic Letter","3","Dr. Alan…"],
+    ["4340","-","Clinic Letter","2","Dr. Alan…"],
+    ["4341","Dermatology","Discharge Summary","10","Dr. Alan…"],
+    ["4342","Private GP","Clinic Letter","1","Dr. Alan…"],
+    ["4343","Gynaecology","Discharge Summary","11","Dr. Alan…"],
+    ["4344","Gynaecology","Discharge Summary","2","Dr. Alan…"],
+    ["4345","Maternity","Discharge Summary","4","-"],
+    ["4346","Maternity","Discharge Summary","3","-"],
+    ["4347","Oncology","Clinic Letter","6","Derek H…"],
+    ["4348","Diabetes And Endocrinolo…","Clinic Letter","14","Stiles S…"],
+    ["4349","Maternity","Clinic Letter","1","Stiles S…"],
+    ["4350","-","Clinic Letter","2","Stiles S…"],
+    ["4351","-","-","4","Stiles S…"],
+    ["4352","Private GP","Clinic Letter","3","Thomas…"],
+    ["4353","Gynaecology","Clinic Letter","1","-"],
+    ["4334","Dermatology","Clinic Letter","1","Derek H…"],
+    ["4354","Oncology","Clinic Letter","3","Stiles S…"],
+    ["4354","Oncology","Clinic Letter","3","Stiles S…"]
+  ];
+
+  /* ---------------- helpers ---------------- */
+  function fmt(n){ return Number(n).toLocaleString('en-GB'); }
+
+  function barStyle(pct){
+    var bg = 'linear-gradient(to right, #7A8A9F 0 ' + pct + '%, #F4F4F4 ' + pct + '% 100%)';
+    var border = (pct >= 100) ? 'none' : '1px solid #7A8B9F';
+    return 'background:' + bg + ';border:' + border + ';';
+  }
+
+  function dataRowHTML(r){
+    var hasBar = (r.pct !== undefined);
+    return '' +
+      '<div class="row-hotspot" tabindex="0" role="link" data-filter="' + r.label + '" data-count="' + r.value + '" title="View \'' + r.label + '\' on demo.betterletter.ai">' +
+        '<div class="row-top">' +
+          '<span class="row-label">' + r.label + '</span>' +
+          '<span class="row-value">' + fmt(r.value) + '</span>' +
+        '</div>' +
+        (hasBar ? '<div class="bar" style="' + barStyle(r.pct) + '"></div>' : '') +
+      '</div>';
+  }
+
+  function setFilterAttrs(id, label, count){
+    var el = document.getElementById(id);
+    el.setAttribute('data-filter', label);
+    el.setAttribute('data-count', count);
+  }
+
+  function renderModal(period){
+    var d = DATA[period];
+
+    document.getElementById('modalTitle').textContent = d.title;
+    document.getElementById('inputTitle').textContent = d.inputTitle;
+    document.getElementById('completedTitle').textContent = d.completedTitle;
+
+    document.getElementById('inputTotal').textContent = fmt(d.input.total);
+    document.getElementById('inputRows').innerHTML = d.input.rows.map(dataRowHTML).join('');
+
+    document.getElementById('completedTotal').textContent = fmt(d.completed.total);
+    document.getElementById('completedRows').innerHTML = d.completed.rows.map(dataRowHTML).join('');
+
+    document.getElementById('pipelineTotal').textContent = fmt(d.pipeline.total);
+    document.getElementById('needsActionTotal').textContent = fmt(d.pipeline.needsActionTotal);
+    document.getElementById('needsActionRows').innerHTML = d.pipeline.needsAction.map(dataRowHTML).join('');
+    document.getElementById('everythingTotal').textContent = fmt(d.pipeline.everythingTotal);
+    document.getElementById('everythingRows').innerHTML = d.pipeline.everything.map(dataRowHTML).join('');
+
+    setFilterAttrs('inputHead', d.inputTitle, d.input.total);
+    setFilterAttrs('completedHead', d.completedTitle, d.completed.total);
+    setFilterAttrs('pipelineHead', 'Currently in pipeline', d.pipeline.total);
+    setFilterAttrs('needsActionHead', 'Needs action from your team', d.pipeline.needsActionTotal);
+    setFilterAttrs('everythingHead', 'Everything else', d.pipeline.everythingTotal);
+
+    document.querySelectorAll('.period-seg').forEach(function(seg){
+      seg.classList.toggle('active', seg.getAttribute('data-period') === period);
+    });
+  }
+
+  function renderPopover(state){
+    var p = POPOVER[state];
+    document.getElementById('povInput').textContent = fmt(p.input);
+    document.getElementById('povPipeline').textContent = fmt(p.pipeline);
+    document.getElementById('povCompleted').textContent = fmt(p.completed);
+    document.getElementById('povStatus').textContent = p.status;
+    document.getElementById('povStatusRow').classList.toggle('interrupted', state === 'interrupted');
+    document.getElementById('pulsePill').classList.toggle('interrupted', state === 'interrupted');
+  }
+
+  function rowHTML(row){
+    return '<div class="row-grid data-row">' +
+      '<div><input type="checkbox"></div>' +
+      '<div class="dc">' + row[0] + '</div>' +
+      '<div class="dc">33344455</div>' +
+      '<div class="dc">02 Sep 2022</div>' +
+      '<div class="dc">01 Sep 2022</div>' +
+      '<div class="dc">Lee Valley GP</div>' +
+      '<div class="dc">' + row[1] + '</div>' +
+      '<div class="dc">' + row[2] + '</div>' +
+      '<div class="dc">' + row[3] + '</div>' +
+      '<div class="dc">' + row[4] + '</div>' +
+    '</div>';
+  }
+
+  function renderTable(){
+    document.getElementById('tableRows').innerHTML = TABLE_ROWS.map(rowHTML).join('');
+  }
+
+  function renderFilteredTable(){
+    var f = state.filter;
+    var resultsEl = document.getElementById('resultsLine');
+    var emptyEl = document.getElementById('emptyState');
+    var tableRowsEl = document.getElementById('tableRows');
+    if(f.count === 0){
+      tableRowsEl.innerHTML = '';
+      resultsEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = "No letters match '" + f.label + "'.";
+    } else {
+      emptyEl.style.display = 'none';
+      var shown = Math.min(f.count, 25);
+      var rows = [];
+      for(var i=0;i<shown;i++){ rows.push(TABLE_ROWS[i % TABLE_ROWS.length]); }
+      tableRowsEl.innerHTML = rows.map(rowHTML).join('');
+      resultsEl.style.display = 'block';
+      resultsEl.textContent = 'Showing ' + shown + ' of ' + fmt(f.count) + ' letters';
+    }
+  }
+
+  /* ---------------- state ---------------- */
+  var state = { period:'day', popoverOpen:false, modalOpen:false, pulse:'online', filter:null };
+
+  var scrim = document.getElementById('scrim');
+  var popover = document.getElementById('popover');
+  var modalCard = document.getElementById('modalCard');
+  var pulsePill = document.getElementById('pulsePill');
+  var canvasEl = document.getElementById('canvas');
+  var hoverCloseTimer = null;
+  var HOVER_GRACE_MS = 150;
+
+  /* ---------------- popover left-align to pill (Issue 2) ----------------
+     Walk the offsetParent chain (pure layout geometry) rather than
+     getBoundingClientRect, so the result is already in the unscaled
+     1440x1024 canvas coordinate system and stays correct under the
+     fit-to-screen transform:scale at any window size. */
+  function offsetLeftWithin(el, ancestor){
+    var x = 0;
+    var node = el;
+    while(node && node !== ancestor){
+      x += node.offsetLeft;
+      node = node.offsetParent;
+    }
+    return x;
+  }
+  function positionPopover(){
+    var x = offsetLeftWithin(pulsePill, canvasEl);
+    popover.style.left = x + 'px';
+  }
+
+  function openPopover(){
+    state.popoverOpen = true;
+    positionPopover();
+    popover.classList.add('open');
+  }
+  function closePopover(){
+    state.popoverOpen = false;
+    popover.classList.remove('open');
+  }
+  function openModal(){
+    state.modalOpen = true;
+    cancelHoverClose();
+    closePopover();
+    modalCard.classList.add('open');
+    scrim.classList.add('open');
+    renderModal(state.period);
+  }
+  function closeModal(){
+    state.modalOpen = false;
+    modalCard.classList.remove('open');
+    scrim.classList.remove('open');
+  }
+  function setPulseState(s){
+    state.pulse = s;
+    renderPopover(s);
+  }
+  function setPeriod(p){
+    state.period = p;
+    renderModal(p);
+  }
+
+  /* ---------------- filter (Issue 3) ---------------- */
+  function applyFilter(label, count){
+    state.filter = { label: label, count: count };
+    document.getElementById('allLettersChip').classList.remove('active');
+    var chip = document.getElementById('filterChip');
+    chip.classList.add('show');
+    chip.classList.add('active');
+    document.getElementById('filterChipLabel').textContent = label + ' (' + fmt(count) + ')';
+    renderFilteredTable();
+  }
+  function clearFilter(){
+    state.filter = null;
+    document.getElementById('filterChip').classList.remove('show');
+    document.getElementById('filterChip').classList.remove('active');
+    document.getElementById('allLettersChip').classList.add('active');
+    document.getElementById('resultsLine').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    renderTable();
+  }
+  document.getElementById('filterClearBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    clearFilter();
+  });
+
+  /* ---------------- popover rows as filter links (Issue 3) ----------------
+     "System status" is deliberately excluded - it is not a link. Each handler
+     stops propagation so the click does NOT also bubble to the popover's own
+     click listener (which opens the full modal). */
+  function popoverRowFilter(label, valueKey){
+    return function(e){
+      e.stopPropagation();
+      var count = POPOVER[state.pulse][valueKey];
+      closePopover();
+      applyFilter(label, count);
+    };
+  }
+  document.getElementById('povInputRow').addEventListener('click', popoverRowFilter('Input letters', 'input'));
+  document.getElementById('povPipelineRow').addEventListener('click', popoverRowFilter('Pipeline', 'pipeline'));
+  document.getElementById('povCompletedRow').addEventListener('click', popoverRowFilter('Completed letters', 'completed'));
+  ['povInputRow','povPipelineRow','povCompletedRow'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.click();
+    });
+  });
+
+  /* ---------------- events ---------------- */
+  // Hover preview: opening on mouseenter of the pill OR the popover, with a short
+  // grace timeout on leaving either, so moving the cursor pill -> popover doesn't flicker.
+  function cancelHoverClose(){
+    clearTimeout(hoverCloseTimer);
+    hoverCloseTimer = null;
+  }
+  function scheduleHoverClose(){
+    cancelHoverClose();
+    hoverCloseTimer = setTimeout(function(){ closePopover(); }, HOVER_GRACE_MS);
+  }
+  pulsePill.addEventListener('mouseenter', function(){
+    cancelHoverClose();
+    if(!state.modalOpen) openPopover();
+  });
+  pulsePill.addEventListener('mouseleave', scheduleHoverClose);
+  pulsePill.addEventListener('focus', function(){
+    cancelHoverClose();
+    if(!state.modalOpen) openPopover();
+  });
+  pulsePill.addEventListener('blur', scheduleHoverClose);
+  popover.addEventListener('mouseenter', cancelHoverClose);
+  popover.addEventListener('mouseleave', scheduleHoverClose);
+
+  // Whole pill (and the popover) is one clickzone -> opens the full modal.
+  // The arrow icon is a visual affordance only, not a separate hotspot.
+  pulsePill.addEventListener('click', function(){ openModal(); });
+  pulsePill.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openModal(); }
+  });
+  popover.addEventListener('click', function(){ openModal(); });
+
+  document.querySelectorAll('.period-seg').forEach(function(seg){
+    seg.addEventListener('click', function(){ setPeriod(seg.getAttribute('data-period')); });
+  });
+
+  scrim.addEventListener('click', closeModal);
+
+  // Modal row-hotspot clicks -> close overlay + apply filter (Issue 3).
+  // Delegated on the modal wrapper so it survives innerHTML re-renders on period switch.
+  modalCard.addEventListener('click', function(e){
+    var hot = e.target.closest('.row-hotspot[data-filter]');
+    if(!hot) return;
+    var label = hot.getAttribute('data-filter');
+    var count = parseInt(hot.getAttribute('data-count'), 10) || 0;
+    closeModal();
+    closePopover();
+    applyFilter(label, count);
+  });
+  modalCard.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    var hot = e.target.closest('.row-hotspot[data-filter]');
+    if(!hot) return;
+    e.preventDefault();
+    var label = hot.getAttribute('data-filter');
+    var count = parseInt(hot.getAttribute('data-count'), 10) || 0;
+    closeModal();
+    closePopover();
+    applyFilter(label, count);
+  });
+
+  document.addEventListener('click', function(e){
+    if(!state.popoverOpen) return;
+    if(popover.contains(e.target) || pulsePill.contains(e.target) || e.target.closest('.presenter-controls')) return;
+    closePopover();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      if(state.modalOpen) closeModal();
+      else if(state.popoverOpen) closePopover();
+    }
+  });
+
+  /* ---------------- demo controls (explicitly non-product, live in the presenter bar) ---------------- */
+  document.getElementById('dcOnline').addEventListener('click', function(){
+    cancelHoverClose();
+    closeModal();
+    setPulseState('online');
+    openPopover();
+  });
+  document.getElementById('dcInterrupted').addEventListener('click', function(){
+    cancelHoverClose();
+    closeModal();
+    setPulseState('interrupted');
+    openPopover();
+  });
+  document.getElementById('dcReset').addEventListener('click', function(){
+    cancelHoverClose();
+    closeModal();
+    closePopover();
+    clearFilter();
+    setPulseState('online');
+    state.period = 'day';
+    renderModal('day');
+  });
+
+  /* ---------------- fit-to-screen (Issue 4) ---------------- */
+  function fitStage(){
+    var bar = document.querySelector('.presenter-bar');
+    var barH = bar ? bar.offsetHeight : 0;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var scale = Math.min(vw / 1440, (vh - barH) / 1024, 1);
+    document.getElementById('canvas').style.transform = 'scale(' + scale + ')';
+    if(state.popoverOpen) positionPopover();
+  }
+  window.addEventListener('load', fitStage);
+  window.addEventListener('resize', fitStage);
+
+  /* ---------------- init ---------------- */
+  renderTable();
+  renderModal('day');
+  renderPopover('online');
+  fitStage();
+
+})();
+</script>
+
+</body>
+</html>

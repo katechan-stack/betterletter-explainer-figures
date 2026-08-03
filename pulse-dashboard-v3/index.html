@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pulse Dashboard V3 - BetterLetter (V0-V1-V2 progression)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#011936;
+    --bg:#F4F4F4;
+    --white:#FFFFFF;
+    --border:#DEE7EE;
+    --subtle-border:#7A8B9F;
+    --subtle-text:#556D8A;
+    --bar-fill:#7A8A9F;
+    --teal:#68E7D1;
+    --salmon:#F79CA4;
+    /* Status colours for v3 progression: reuses the existing BetterLetter annotation
+       pair "All other useful information" (fill #DAF79D / stroke #B6EF3E) as a
+       general status-positive green, and the existing Diagnosis/Alert stroke
+       (#EF3E5D) as status-red/urgent. Sampled directly from the reference renders
+       per the build spec - see build report for the reuse note. */
+    --green-bg:#DAF79D;
+    --green:#B6EF3E;
+    --red:#EF3E5D;
+    --pulse-shadow:0 4px 24px rgba(1,25,54,0.24);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    font-family:'Atkinson Hyperlegible', sans-serif;
+    background:var(--bg);
+    color:var(--navy);
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+    height:100vh; overflow:hidden;
+  }
+  button, input{ font-family:inherit; }
+  a{ color:inherit; }
+
+  /* ============================================================
+     PRESENTER BAR (outside the canvas / test area)
+     ============================================================ */
+  .presenter-bar{
+    flex:0 0 auto; min-height:48px;
+    background:#fff; border-bottom:1px dashed var(--subtle-border);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 20px; gap:16px; flex-wrap:wrap;
+  }
+  .presenter-label{
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--subtle-text); white-space:nowrap;
+  }
+  .presenter-controls{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .presenter-controls button{
+    font-size:13px; padding:6px 12px; border:1px solid var(--subtle-border); border-radius:4px;
+    background:#fff; color:var(--navy); cursor:pointer;
+  }
+  .presenter-controls button.dc-reset{ color:var(--subtle-text); border-style:dashed; }
+  .presenter-controls button:hover{ background:#eef2f5; }
+  .presenter-controls button:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+
+  .seg-cluster{ display:flex; align-items:center; gap:6px; }
+  .seg-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--subtle-text); white-space:nowrap; }
+  .seg-group{ display:flex; border:1px solid var(--subtle-border); border-radius:4px; overflow:hidden; }
+  .seg-btn{
+    font-size:13px; padding:6px 11px; border:none; border-right:1px solid var(--subtle-border);
+    background:#fff; color:var(--navy); cursor:pointer; font-family:inherit;
+  }
+  .seg-btn:last-child{ border-right:none; }
+  .seg-btn.active{ background:var(--navy); color:#fff; }
+  .seg-btn:hover:not(.active):not(:disabled){ background:#eef2f5; }
+  .seg-btn:focus-visible{ outline:2px solid var(--teal); outline-offset:-2px; }
+  .seg-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .presenter-divider{ width:1px; height:24px; background:var(--border); }
+
+  /* ============================================================
+     STAGE (scales the fixed 1440x1024 canvas to fit the viewport)
+     ============================================================ */
+  .stage{
+    flex:1 1 auto; position:relative; overflow:hidden;
+  }
+  .canvas{
+    width:1440px; height:1024px;
+    position:absolute; top:0; left:50%; margin-left:-720px;
+    background:#fff;
+    overflow:hidden;
+    box-shadow:0 4px 24px rgba(1,25,54,0.14);
+    transform-origin: top center;
+  }
+
+  /* ---------- focus ---------- */
+  .canvas *:focus-visible{
+    outline:2px solid var(--teal);
+    outline-offset:2px;
+    border-radius:4px;
+  }
+
+  /* ============================================================
+     LETTERS LIST BACKGROUND (shared chrome)
+     ============================================================ */
+  .list-bg{ position:absolute; inset:0; z-index:1; }
+
+  /* --- top header --- */
+  .top-header{
+    position:absolute; top:0; left:0; right:0; height:56px;
+    background:#fff; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px;
+  }
+  .left-group{ display:flex; align-items:center; gap:16px; }
+  .right-group{ display:flex; align-items:center; gap:16px; }
+
+  .logo{
+    border:2px solid var(--navy); border-radius:8px;
+    padding:6px 12px; font-weight:700; font-size:15px;
+    letter-spacing:0.02em; color:var(--navy); white-space:nowrap;
+  }
+
+  .nav-pill{
+    display:flex; align-items:center; height:40px;
+    border:1px solid var(--border); border-radius:8px;
+    background:#fff; overflow:hidden;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:6px; height:100%;
+    padding:0 14px; font-size:16px; font-weight:700; color:var(--navy);
+    background:transparent; border:none; cursor:default;
+  }
+  .nav-item.active{ background:rgba(1,25,54,0.07); }
+  .nav-item .ic{ display:flex; }
+  .nav-item.active .ic{ color:var(--teal); }
+  .nav-item:not(.active) .ic{ color:var(--navy); }
+
+  /* ---------- pulse pill (multi-version content) ---------- */
+  .pulse-pill{
+    display:flex; align-items:center; gap:8px; height:40px;
+    padding:0 12px 0 14px; border:1px solid var(--border); border-radius:8px;
+    background:#fff; cursor:pointer; transition:background .12s ease;
+  }
+  .pulse-pill:hover{ background:#CEEBFF; }
+  .pulse-pill.interrupted{ background:var(--salmon); border-color:var(--salmon); }
+  .pulse-pill.interrupted:hover{ background:#f58ea0; }
+  .pulse-pill .p-text{ font-size:16px; font-weight:700; color:var(--navy); }
+  .pulse-pill .p-ic{ display:flex; color:var(--navy); }
+  .pulse-expand{ display:flex; align-items:center; justify-content:center; color:var(--navy); }
+
+  .pill-mode{ display:none; align-items:center; gap:8px; }
+  body[data-version="v0"] .pill-mode.pill-v0{ display:flex; }
+  body[data-version="v1"] .pill-mode.pill-manager{ display:flex; }
+  body[data-version="v2"][data-role="manager"] .pill-mode.pill-manager{ display:flex; }
+  body[data-version="v2"][data-role="coder"][data-pulse="online"] .pill-mode.pill-coder{ display:flex; }
+  body[data-version="v2"][data-role="coder"][data-pulse="interrupted"] .pill-mode.pill-coder-zero{ display:flex; }
+
+  .coder-stat{ display:flex; align-items:center; gap:4px; }
+  .coder-stat .p-ic{ display:flex; }
+  .coder-stat .p-ic.ic-flag{ color:var(--red); }
+  .coder-stat .p-ic.ic-pencil{ color:var(--navy); }
+  .coder-stat .p-ic.ic-check{ color:var(--green); filter:brightness(0.75) saturate(1.3); }
+  .coder-stat .stat-val{ font-size:16px; font-weight:700; color:var(--navy); text-decoration:underline; }
+  .mini-pill-ring{ display:flex; width:20px; height:20px; }
+
+  .practice-select{
+    width:358px; height:40px; border:1px solid var(--subtle-border);
+    border-radius:6px; background:#fff;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 12px; font-size:16px; color:var(--navy);
+  }
+  .account-btn{
+    width:40px; height:40px; border-radius:50%;
+    border:1px solid var(--subtle-border); background:#fff;
+    display:flex; align-items:center; justify-content:center; color:var(--navy);
+  }
+
+  /* --- mailroom ribbon --- */
+  .ribbon{
+    position:absolute; top:56px; left:0; right:0; height:48px;
+    background:var(--navy); display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px;
+  }
+  .ribbon .left, .ribbon .right{ display:flex; align-items:center; gap:8px; }
+  .rbtn{
+    display:flex; align-items:center; gap:6px; height:32px; padding:0 12px;
+    border:1px solid rgba(255,255,255,0.25); border-radius:6px;
+    background:transparent; color:#fff; font-size:16px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.03em; cursor:pointer;
+  }
+  .rbtn:hover{ background:rgba(255,255,255,0.08); }
+  .rdivider{ width:1px; height:20px; background:rgba(255,255,255,0.15); }
+  .rchip{
+    height:32px; padding:0 12px; display:flex; align-items:center;
+    border-radius:6px; font-size:16px; font-weight:700; color:#fff;
+    border:1px solid rgba(255,255,255,0.25); background:var(--navy); white-space:nowrap;
+  }
+  .rchip.active{ background:var(--teal); color:var(--navy); border-color:transparent; }
+  .rchip.filter-chip{ display:none; gap:8px; }
+  .rchip.filter-chip.show{ display:flex; }
+  .chip-clear{
+    background:none; border:none; color:var(--navy); font-size:14px;
+    line-height:1; cursor:pointer; padding:0;
+  }
+
+  /* --- letters table --- */
+  .table-area{ position:absolute; top:104px; left:0; right:0; bottom:0; background:#fff; overflow:hidden; }
+  .table-toolbar{
+    height:48px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px; border-bottom:1px solid var(--border);
+  }
+  .tt-left{ display:flex; align-items:center; gap:8px; font-size:16px; }
+  .tt-left input[type=checkbox]{ width:16px; height:16px; accent-color:var(--navy); }
+  .tt-right{ display:flex; align-items:center; gap:14px; }
+  .tt-count{ font-size:16px; color:var(--subtle-text); }
+  .stbtn{
+    height:32px; padding:0 14px; border:2px solid var(--navy); border-radius:4px;
+    background:#fff; color:var(--navy); font-weight:700; font-size:16px;
+    text-transform:uppercase; letter-spacing:0.03em; display:flex; align-items:center; gap:6px;
+    opacity:0.55; cursor:not-allowed;
+  }
+
+  .results-line{
+    display:none; padding:8px 32px; font-size:14px; color:var(--subtle-text);
+    border-bottom:1px solid var(--border);
+  }
+  .empty-state{
+    display:none; padding:24px 32px; font-size:16px; color:var(--navy);
+  }
+
+  .row-grid{
+    display:grid;
+    grid-template-columns: 40px 74px 110px 128px 128px 116px 220px 160px 70px 1fr;
+    align-items:center; column-gap:8px;
+    padding:0 32px;
+  }
+  .col-header-row{
+    height:40px; border-bottom:1px solid var(--border);
+    font-size:16px; font-weight:700; color:var(--navy);
+  }
+  .col-header-row .ch{ display:flex; align-items:center; gap:4px; }
+  .col-header-row .ch svg{ opacity:0.6; }
+  .data-row{ height:34px; border-bottom:1px solid var(--border); font-size:16px; color:var(--navy); }
+  .data-row .dc{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .data-row input[type=checkbox]{ width:16px; height:16px; accent-color:var(--navy); }
+  .rows-scroll{ overflow:hidden; height:100%; }
+
+  /* ============================================================
+     SCRIM
+     ============================================================ */
+  .scrim{
+    position:absolute; inset:0; z-index:20;
+    background:rgba(1,25,54,0.5);
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .18s ease-out, visibility 0s linear .18s;
+  }
+  .scrim.open{
+    opacity:1; visibility:visible; pointer-events:auto;
+    transition:opacity .18s ease-out;
+  }
+
+  /* ============================================================
+     DAILY PULSE POPOVER (manager: V0/V1 simple list, V2 list+pace-banner)
+     ============================================================ */
+  .popover{
+    position:absolute; top:60px; width:369px;
+    background:var(--bg); border-radius:8px; padding:16px;
+    display:none; flex-direction:column; gap:8px;
+    box-shadow:var(--pulse-shadow);
+    z-index:30;
+  }
+  .popover.open{ display:flex; }
+  .popover-header{
+    display:flex; align-items:center; gap:8px;
+    font-size:20px; font-weight:400; color:var(--navy);
+  }
+  .popover-header .p-ic{ display:flex; color:var(--navy); }
+
+  .popover-banner{
+    display:none;
+    font-size:14px; font-weight:700; line-height:1.35; color:var(--navy);
+    background:var(--green-bg); border-radius:6px; padding:10px 12px;
+  }
+  .popover-banner.interrupted{ background:var(--salmon); }
+  body[data-version="v2"][data-role="manager"] .popover-banner{ display:block; }
+
+  .pill-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border-radius:8px; padding:4px 8px;
+  }
+  .pill-row .pl{ font-size:16px; font-weight:400; color:var(--navy); display:flex; align-items:center; gap:6px; }
+  .pill-row .pv{ font-size:24px; font-weight:400; color:var(--navy); }
+  .pill-row.status.interrupted{ background:var(--salmon); }
+  .pill-row.link{ cursor:pointer; transition:background .1s ease; }
+  .pill-row.link:hover{ background:#CEEBFF; }
+  .pov-chk{ display:none; color:var(--green); filter:brightness(0.75) saturate(1.3); flex:0 0 auto; }
+  .pov-warn{ display:none; color:var(--navy); flex:0 0 auto; }
+  body[data-version="v2"][data-role="manager"] .pov-chk{ display:flex; }
+  body[data-version="v2"][data-role="manager"] .pill-row.status.interrupted .pov-chk{ display:none; }
+  body[data-version="v2"][data-role="manager"] .pill-row.status.interrupted .pov-warn{ display:flex; }
+
+  .popover-view-all{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:5px 8px; border-radius:6px;
+    font-size:16px; font-weight:400; color:var(--navy);
+    cursor:pointer; transition:background .1s ease;
+  }
+  .popover-view-all:hover{ background:#CEEBFF; }
+  .popover-view-all .va-label{ display:flex; align-items:center; gap:6px; }
+  .popover-view-all .va-arrow{ display:flex; }
+
+  /* ============================================================
+     CODER RING POPOVER (V2 - coder role only)
+     ============================================================ */
+  .coder-popover{
+    position:absolute; top:60px; width:400px;
+    display:none; flex-direction:column; gap:12px;
+    z-index:30;
+  }
+  .coder-popover.open{ display:flex; }
+  .cp-card{
+    background:var(--bg); border-radius:8px; padding:16px;
+    box-shadow:var(--pulse-shadow);
+  }
+  .cp-header-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .cp-title{ font-size:20px; font-weight:400; color:var(--navy); }
+  .cp-zero-banner{
+    display:none; align-items:center; gap:6px;
+    background:var(--green-bg); border-radius:20px; padding:6px 12px;
+    font-size:13px; font-weight:700; color:var(--navy);
+  }
+  .cp-zero-banner u{ cursor:pointer; }
+  body[data-pulse="interrupted"] .cp-zero-banner{ display:inline-flex; }
+
+  .cp-body{ display:flex; gap:16px; align-items:center; }
+  .cp-body-normal{ display:flex; gap:16px; align-items:center; width:100%; }
+  .cp-body-zero{ display:none; gap:16px; align-items:center; width:100%; }
+  body[data-pulse="online"] .cp-body-normal{ display:flex; }
+  body[data-pulse="interrupted"] .cp-body-normal{ display:none; }
+  body[data-pulse="interrupted"] .cp-body-zero{ display:flex; }
+
+  .cp-ring-wrap{ position:relative; width:128px; height:128px; flex:0 0 128px; display:flex; align-items:center; justify-content:center; }
+  .cp-ring-center{ position:absolute; display:flex; flex-direction:column; align-items:center; }
+  .cp-ring-num{ font-size:28px; font-weight:700; color:var(--navy); line-height:1.1; }
+  .cp-ring-cap{ font-size:12px; color:var(--subtle-text); }
+
+  .cp-rows{ flex:1 1 auto; display:flex; flex-direction:column; gap:10px; }
+  .cp-row{
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    padding:4px 6px; margin:-4px -6px; border-radius:6px; transition:background .1s ease;
+  }
+  .cp-row:hover{ background:#CEEBFF; }
+  .cp-row .cp-ic{ display:flex; flex:0 0 auto; }
+  .cp-row .cp-ic.ic-flag{ color:var(--red); }
+  .cp-row .cp-ic.ic-pencil{ color:var(--navy); }
+  .cp-row .cp-ic.ic-check{ color:var(--green); filter:brightness(0.7) saturate(1.4); }
+  .cp-row-label{ flex:1 1 auto; font-size:15px; color:var(--navy); text-decoration:underline; }
+  .cp-row-value{ font-size:18px; font-weight:700; color:var(--navy); }
+
+  .cp-feed-card{ background:var(--bg); border-radius:8px; padding:16px; box-shadow:var(--pulse-shadow); }
+  .cp-feed-title{ font-size:16px; color:var(--navy); margin-bottom:10px; }
+  .cp-feed-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:#fff; border-radius:8px; padding:8px 10px; margin-bottom:8px;
+    cursor:pointer; transition:background .1s ease;
+  }
+  .cp-feed-row:last-child{ margin-bottom:0; }
+  .cp-feed-row:hover{ background:#CEEBFF; }
+  .cp-feed-main{ display:flex; flex-direction:column; gap:2px; }
+  .cp-feed-id{ font-size:15px; color:var(--navy); }
+  .cp-feed-time{ font-size:12px; color:var(--subtle-text); }
+  .cp-feed-link{ display:flex; color:var(--subtle-text); flex:0 0 auto; }
+
+  /* ============================================================
+     FULL PULSE MODAL - transparent wrapper, floating cards
+     ============================================================ */
+  .pulse-wrap{
+    position:absolute; left:160px; top:247px; width:1120px;
+    display:flex; flex-direction:column; gap:20px;
+    z-index:40;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .18s ease-out, visibility 0s linear .18s;
+  }
+  .pulse-wrap.open{
+    opacity:1; visibility:visible; pointer-events:auto;
+    transition:opacity .18s ease-out;
+  }
+  /* V1/V2 modal is taller (chart row + tiles): raise the top and allow it to run
+     most of the canvas height, with an internal scroll safety net so nothing is
+     ever silently clipped by the canvas's overflow:hidden. */
+  body[data-version="v1"] .pulse-wrap,
+  body[data-version="v2"] .pulse-wrap{
+    top:56px;
+    max-height:944px;
+    overflow-y:auto;
+    padding-right:4px;
+  }
+
+  .header-card{
+    background:#fff; border-radius:8px; padding:16px;
+    box-shadow:var(--pulse-shadow);
+    display:flex; align-items:center; justify-content:space-between;
+    flex:0 0 auto;
+  }
+  .modal-title{
+    display:flex; align-items:center; gap:8px;
+    font-size:24px; line-height:32px; font-weight:400; color:var(--navy);
+  }
+  .modal-title .ic{ display:flex; color:var(--navy); flex:0 0 auto; }
+
+  .period-toggle{ display:flex; width:300px; height:32px; flex:0 0 auto; }
+  .period-seg{
+    width:100px; height:32px; padding:4px 8px;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+    font-size:16px; font-weight:400; color:var(--navy);
+    background:transparent; border:1px solid var(--navy);
+    cursor:pointer; font-family:inherit;
+  }
+  .period-seg:first-child{ border-top-left-radius:8px; border-bottom-left-radius:8px; }
+  .period-seg:last-child{ border-top-right-radius:8px; border-bottom-right-radius:8px; }
+  .period-seg .chk{ display:none; color:var(--teal); }
+  .period-seg.active{ background:var(--navy); color:#fff; }
+  .period-seg.active .chk{ display:flex; }
+  .period-seg:hover:not(.active){ background:#CEEBFF; }
+
+  /* ---------- chart row (V1+): team speed + pipeline volume ---------- */
+  .chart-row{ display:none; gap:20px; flex:0 0 auto; }
+  body[data-version="v1"] .chart-row,
+  body[data-version="v2"] .chart-row{ display:flex; }
+
+  .chart-tile{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; }
+  .chart-tile-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+  .chart-tile-head .t-title{ font-size:16px; font-weight:400; color:var(--navy); display:flex; align-items:center; }
+  .chart-tile-head .t-total{ font-size:20px; font-weight:400; color:var(--navy); }
+  .chart-tile-head .t-total-sub{ font-size:13px; color:var(--subtle-text); font-weight:400; }
+
+  .status-chk{ display:none; margin-right:6px; color:var(--green); filter:brightness(0.7) saturate(1.4); flex:0 0 auto; }
+  body[data-version="v2"][data-role="manager"] .status-chk{ display:inline-flex; }
+
+  /* Higher specificity than the .ts-block/.pv-frame base rules (which each set
+     their own display) so this hider always wins for the non-active period,
+     regardless of source order. */
+  .chart-tile [data-p]{ display:none; }
+  #modalCard[data-period="day"] .ts-block[data-p="day"],
+  #modalCard[data-period="week"] .ts-block[data-p="week"],
+  #modalCard[data-period="month"] .ts-block[data-p="month"]{ display:flex; }
+  #modalCard[data-period="day"] .pv-frame[data-p="day"],
+  #modalCard[data-period="week"] .pv-frame[data-p="week"],
+  #modalCard[data-period="month"] .pv-frame[data-p="month"]{ display:flex; }
+  .ts-block{ flex-direction:column; gap:10px; flex:1 1 auto; }
+
+  .ring-big-wrap{
+    position:relative; width:170px; height:170px; margin:0 auto;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg); border-radius:8px;
+  }
+  .ring-big-center{ position:absolute; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .ring-big-num{ font-size:26px; font-weight:700; color:var(--navy); line-height:1.15; }
+  .ring-big-cap{ font-size:12px; color:var(--subtle-text); line-height:1.3; }
+
+  .ts-day-frame{ background:var(--bg); border-radius:8px; padding:14px 8px; display:flex; align-items:center; justify-content:center; }
+
+  .mini-rings-row{ display:flex; gap:6px; justify-content:space-between; background:var(--bg); border-radius:8px; padding:14px 8px; }
+  .mini-ring-chip{ display:flex; flex-direction:column; align-items:center; gap:6px; flex:1 1 0; min-width:0; }
+  .mini-ring-wrap{ position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+  .mini-ring-num{ position:absolute; font-size:13px; font-weight:700; color:var(--navy); }
+  .mini-ring-num.dim{ color:var(--subtle-border); font-weight:400; }
+  .mini-ring-date{
+    font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px;
+    white-space:nowrap; text-align:center;
+  }
+  .mini-ring-date.filled{ background:var(--navy); color:#fff; }
+  .mini-ring-date.outline{ background:transparent; border:1px solid var(--border); color:var(--subtle-text); }
+
+  .ring-legend{ display:flex; align-items:center; gap:16px; font-size:12px; color:var(--subtle-text); padding:0 4px; }
+  .ring-legend .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+  .ring-legend .dot.g{ background:var(--green); }
+  .ring-legend .dot.r{ background:var(--red); }
+
+  .pace-line{ font-size:13px; color:var(--navy); text-align:center; padding:0 4px; }
+  /* Day pace-line is a V2 addition per the Figma progression - V1's team-speed
+     card (Daily) shows only the ring; V2 Manager adds the pace prediction. */
+  .ts-block[data-p="day"] .pace-line{ display:none; }
+  body[data-version="v2"][data-role="manager"] .ts-block[data-p="day"] .pace-line{ display:block; }
+  .pace-banner{
+    display:none;
+    font-size:13px; font-weight:700; color:var(--navy); text-align:center; line-height:1.4;
+    background:var(--salmon); border-radius:6px; padding:8px 12px;
+  }
+  body[data-version="v2"][data-role="manager"] .pace-banner{ display:block; }
+
+  /* ---------- trend chips ---------- */
+  .trend-chip{
+    display:none; align-items:center; gap:3px; vertical-align:middle;
+    background:var(--green-bg); color:var(--navy);
+    font-size:11px; font-weight:700; padding:2px 7px 2px 5px; border-radius:10px; margin-left:6px;
+  }
+  body[data-version="v2"][data-role="manager"] .trend-chip{ display:inline-flex; }
+
+  /* ---------- bar chart (pipeline volume) ---------- */
+  .pv-frame{ background:var(--bg); border-radius:8px; padding:12px 12px 8px; display:flex; flex-direction:column; gap:6px; flex:1 1 auto; }
+  .pv-plot{ position:relative; display:flex; align-items:flex-end; gap:3px; height:130px; }
+  .pv-typical{ position:absolute; left:0; right:0; border-top:1px dashed var(--subtle-border); z-index:1; }
+  .pv-col{ flex:1 1 0; min-width:0; height:100%; display:flex; align-items:flex-end; position:relative; }
+  .pv-col.weekend{ background:repeating-linear-gradient(45deg, rgba(122,139,159,0.14) 0 4px, transparent 4px 9px); border-radius:2px; }
+  .pv-bar{ width:100%; background:var(--navy); border-radius:2px 2px 0 0; position:relative; z-index:2; }
+  .pv-tooltip{
+    position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+    background:var(--teal); color:var(--navy); font-size:11px; font-weight:700; line-height:1.3;
+    padding:5px 8px; border-radius:5px; white-space:nowrap; z-index:5; text-align:left;
+  }
+  .pv-week-group{ flex:1 1 0; min-width:0; display:flex; gap:2px; height:100%; position:relative; }
+  .pv-week-group.tt-target{ z-index:6; }
+  .pv-group-tooltip{
+    position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+    background:var(--teal); color:var(--navy); font-size:11px; font-weight:700; line-height:1.3;
+    padding:5px 8px; border-radius:5px; white-space:nowrap; z-index:5; text-align:left;
+  }
+  .pv-axis{ display:flex; gap:3px; }
+  .pv-axis-cell{ flex:1 1 0; min-width:0; display:flex; justify-content:center; }
+  .pv-axis-cell .pv-label{ font-size:10px; color:var(--subtle-text); }
+  .pv-axis-cell .pv-label.bold{ color:var(--navy); font-weight:700; }
+  .pv-axis-group{ flex:1 1 0; min-width:0; display:flex; justify-content:center; }
+
+  .pv-footer{ display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--subtle-text); margin-top:4px; flex-wrap:wrap; gap:6px; }
+  .pv-footer-left{ display:flex; align-items:center; gap:14px; }
+  .pv-typical-legend{ display:flex; align-items:center; gap:5px; }
+  .pv-typical-legend .swatch{ width:14px; border-top:1px dashed var(--subtle-border); display:inline-block; }
+  .pv-weekend-legend{ display:flex; align-items:center; gap:5px; }
+  .pv-weekend-legend .swatch{ width:12px; height:10px; background:repeating-linear-gradient(45deg, rgba(122,139,159,0.3) 0 3px, transparent 3px 6px); border:1px solid var(--border); display:inline-block; border-radius:2px; }
+
+  .pv-toggle{ display:flex; gap:0; align-self:flex-start; margin-top:2px; }
+  .pv-toggle button{
+    font-size:11px; font-weight:700; padding:5px 10px; border:1px solid var(--navy);
+    background:transparent; color:var(--navy); cursor:pointer; font-family:inherit;
+  }
+  .pv-toggle button:first-child{ border-radius:14px 0 0 14px; }
+  .pv-toggle button:last-child{ border-radius:0 14px 14px 0; border-left:none; }
+  .pv-toggle button.active{ background:var(--navy); color:#fff; }
+
+  .detail-row{ display:flex; gap:20px; flex:0 0 auto; align-items:stretch; }
+  .col-left{ flex:1 1 auto; display:flex; flex-direction:column; gap:20px; }
+  /* Equal-height columns: col-left's two cards share any stretched slack in the
+     Figma ratio (Input 274 : Completed 170) via flex-grow on an auto basis, so
+     content never gets cramped - only whitespace is added/removed. */
+  .col-left > .tile:first-child{ flex:274 1 auto; }
+  .col-left > .tile:last-child{ flex:170 1 auto; }
+  .col-right{ width:489px; flex:0 0 489px; display:flex; flex-direction:column; }
+  .col-right .tile{ flex:1 1 auto; display:flex; flex-direction:column; }
+
+  .tile{
+    background:#fff; border-radius:8px; padding:16px;
+    box-shadow:var(--pulse-shadow);
+    overflow:clip;
+  }
+
+  .tile-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+  .tile-head .t-title{ font-size:16px; font-weight:400; color:var(--navy); display:flex; align-items:center; }
+  .tile-head .t-total{ font-size:24px; font-weight:400; color:var(--navy); text-decoration:underline; }
+
+  .group-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+  .group-head .g-title{ font-size:16px; font-weight:400; color:var(--navy); display:flex; align-items:center; }
+  .group-head .g-total{ font-size:20px; font-weight:400; color:var(--navy); text-decoration:underline; }
+
+  .rows-list{ display:flex; flex-direction:column; gap:16px; }
+
+  .row-hotspot{
+    cursor:pointer; border-radius:6px; padding:5px 8px; margin:-5px -8px;
+    transition:background .1s ease;
+  }
+  .row-hotspot:hover{ background:#CEEBFF; }
+  .row-hotspot:hover .row-value, .row-hotspot:hover .g-total, .row-hotspot:hover .t-total{ text-decoration-thickness:2px; }
+
+  .tile-head.row-hotspot,
+  .group-head.row-hotspot{
+    margin-bottom:16px;
+  }
+  .tile-head.row-hotspot:hover,
+  .group-head.row-hotspot:hover{
+    background:#CEEBFF;
+  }
+
+  .row-top{ display:flex; justify-content:space-between; align-items:center; }
+  .row-label{ font-size:14px; font-weight:400; color:var(--navy); }
+  .row-value{ font-size:14px; font-weight:400; color:var(--navy); text-decoration:underline; }
+
+  .bar{ height:16px; border-radius:4px; margin-top:4px; }
+
+  .tile-divider{ height:1px; background:var(--border); margin:16px 0; }
+
+  .pulse-fade{ transition:opacity .07s ease; }
+  .pulse-fade.fade-dim{ opacity:0.25; }
+</style>
+</head>
+<body data-version="v0" data-role="manager" data-pulse="online">
+
+<div class="presenter-bar">
+  <span class="presenter-label">Presenter controls - for the call</span>
+  <div class="presenter-controls">
+    <div class="seg-cluster">
+      <span class="seg-label">Version</span>
+      <div class="seg-group" id="versionSeg">
+        <button class="seg-btn active" data-version="v0">V0</button>
+        <button class="seg-btn" data-version="v1">V1</button>
+        <button class="seg-btn" data-version="v2">V2</button>
+      </div>
+    </div>
+    <div class="seg-cluster">
+      <span class="seg-label">View as</span>
+      <div class="seg-group" id="roleSeg">
+        <button class="seg-btn active" data-role="manager" disabled>Manager</button>
+        <button class="seg-btn" data-role="coder" disabled>Coder</button>
+      </div>
+    </div>
+    <div class="presenter-divider"></div>
+    <button id="dcOnline">Online</button>
+    <button id="dcInterrupted">Interrupted</button>
+    <button id="dcReset" class="dc-reset">Reset</button>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="canvas" id="canvas">
+
+    <!-- ============ LETTERS LIST BACKGROUND ============ -->
+    <div class="list-bg">
+
+      <!-- top header -->
+      <div class="top-header">
+        <div class="left-group">
+          <div class="logo">BetterLetter</div>
+
+          <div class="nav-pill">
+            <div class="nav-item active">
+              <span class="ic">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Coding
+            </div>
+            <div class="nav-item">
+              <span class="ic">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z" stroke-linejoin="round"/></svg>
+              </span>
+              Tasks
+            </div>
+          </div>
+
+          <div class="pulse-pill" id="pulsePill" tabindex="0" role="button" aria-label="Open full Pulse dashboard. Hover for a quick summary." title="Open Pulse pulse">
+            <!-- V0: simple text pill -->
+            <span class="pill-mode pill-v0">
+              <span class="p-ic">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13 2Z"/></svg>
+              </span>
+              <span class="p-text">Daily Pulse</span>
+            </span>
+            <!-- V1 / V2 Manager: speed text pill -->
+            <span class="pill-mode pill-manager">
+              <span class="p-ic">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13 2Z"/></svg>
+              </span>
+              <span class="p-text" id="pillSpeedText">Avg 40 letters per hour</span>
+            </span>
+            <!-- V2 Coder: status-count pill -->
+            <span class="pill-mode pill-coder">
+              <span class="mini-pill-ring" id="pillRingNormal"></span>
+              <span class="coder-stat">
+                <span class="p-ic ic-flag"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14V2M4 3h8l-2 2.5L12 8H4"/></svg></span>
+                <span class="stat-val">45</span>
+              </span>
+              <span class="coder-stat">
+                <span class="p-ic ic-pencil"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-8 8-3.5 1 1-3.5 8-8z"/></svg></span>
+                <span class="stat-val">27</span>
+              </span>
+              <span class="coder-stat">
+                <span class="p-ic ic-check"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.2 11.7L13 4.5"/></svg></span>
+                <span class="stat-val">200</span>
+              </span>
+            </span>
+            <!-- V2 Coder: inbox-zero celebration pill -->
+            <span class="pill-mode pill-coder-zero">
+              <span class="mini-pill-ring" id="pillRingZero"></span>
+              <span class="p-text">You hit inbox zero! &#127881;</span>
+            </span>
+            <span class="pulse-expand" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 10L10 6M6 6h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="right-group">
+          <div class="practice-select">
+            Lee Valley GP
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="account-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- mailroom ribbon -->
+      <div class="ribbon">
+        <div class="left">
+          <button class="rbtn">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4z" stroke-linejoin="round"/></svg>
+            Filter
+          </button>
+          <button class="rbtn">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="4" height="12" rx="1"/><rect x="8" y="4" width="4" height="12" rx="1"/><rect x="13" y="4" width="4" height="12" rx="1"/></svg>
+            Columns
+          </button>
+          <div class="rdivider"></div>
+          <div class="rchip active" id="allLettersChip">All letters (21092)</div>
+          <div class="rchip filter-chip" id="filterChip">
+            <span id="filterChipLabel"></span>
+            <button class="chip-clear" id="filterClearBtn" aria-label="Clear filter" title="Clear filter">&#10005;</button>
+          </div>
+          <div class="rchip">My letters (13)</div>
+          <div class="rchip">Team review - 15pm (2)</div>
+        </div>
+        <div class="right">
+          <div class="rdivider"></div>
+          <button class="rbtn">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 13V3M10 3L6 7M10 3l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke-linecap="round"/></svg>
+            Upload
+          </button>
+        </div>
+      </div>
+
+      <!-- letters table -->
+      <div class="table-area">
+        <div class="table-toolbar">
+          <div class="tt-left">
+            <input type="checkbox">
+            <span>Select all</span>
+          </div>
+          <div class="tt-right">
+            <span class="tt-count">0 letters selected</span>
+            <button class="stbtn">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="7" r="3"/><path d="M2 17c.8-3 3-5 6-5s5.2 2 6 5" stroke-linecap="round"/><path d="M16 6v4M14 8h4" stroke-linecap="round"/></svg>
+              Assign
+            </button>
+            <button class="stbtn">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h11l-3-3M17 14H6l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Redirect
+            </button>
+          </div>
+        </div>
+
+        <div class="results-line" id="resultsLine"></div>
+        <div class="empty-state" id="emptyState"></div>
+
+        <div class="rows-scroll">
+          <div class="row-grid col-header-row">
+            <div class="ch"></div>
+            <div class="ch">ID <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">NHS NO <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">UPLOAD DATE <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">LETTER DATE <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">PRACTICE <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2"/></svg></div>
+            <div class="ch">DEPARTMENT</div>
+            <div class="ch">LETTER TYPE</div>
+            <div class="ch">PAGES</div>
+            <div class="ch">ASSIGNED</div>
+          </div>
+
+          <div id="tableRows"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SCRIM ============ -->
+    <div class="scrim" id="scrim"></div>
+
+    <!-- ============ DAILY PULSE POPOVER (manager) ============ -->
+    <div class="popover" id="popover">
+      <div class="popover-header">
+        <span class="p-ic">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13 2Z"/></svg>
+        </span>
+        <span>Daily pulse for 28 July</span>
+      </div>
+      <div class="popover-banner" id="povBanner"></div>
+      <div class="pill-row link" id="povInputRow" tabindex="0" role="link" title="View input letters on demo.betterletter.ai">
+        <span class="pl"><svg class="pov-chk" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Input letters</span>
+        <span class="pv" id="povInput">200</span>
+      </div>
+      <div class="pill-row link" id="povPipelineRow" tabindex="0" role="link" title="View pipeline on demo.betterletter.ai">
+        <span class="pl"><svg class="pov-chk" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Pipeline</span>
+        <span class="pv" id="povPipeline">50</span>
+      </div>
+      <div class="pill-row link" id="povCompletedRow" tabindex="0" role="link" title="View completed letters on demo.betterletter.ai">
+        <span class="pl"><svg class="pov-chk" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Completed letters</span>
+        <span class="pv" id="povCompleted">150</span>
+      </div>
+      <div class="pill-row status" id="povStatusRow">
+        <span class="pl">
+          <svg class="pov-chk" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="pov-warn" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2L14.5 13.5H1.5L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3.2M8 11.6v.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          System status
+        </span>
+        <span class="pv" id="povStatus">Online</span>
+      </div>
+      <div class="popover-view-all" id="povViewAllLink" tabindex="0" role="link" title="Open the full Pulse dashboard">
+        <span class="va-label">View full breakdown</span>
+        <span class="va-arrow" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 10L10 6M6 6h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- ============ CODER RING POPOVER (V2 coder role) ============ -->
+    <div class="coder-popover" id="coderPopover">
+      <div class="cp-card">
+        <div class="cp-header-row">
+          <span class="cp-title">Daily Pulse</span>
+          <span class="cp-zero-banner">You hit inbox zero! <u id="cpConfettiLink">Throw some confetti?</u></span>
+        </div>
+        <div class="cp-body">
+          <!-- normal (urgent/not-done/completed) state -->
+          <div class="cp-body-normal">
+            <div class="cp-ring-wrap" id="cpRingNormalWrap">
+              <div class="cp-ring-center">
+                <span class="cp-ring-num">72</span>
+                <span class="cp-ring-cap">to go</span>
+              </div>
+            </div>
+            <div class="cp-rows">
+              <div class="cp-row" data-filter="Urgent letters" data-count="45" tabindex="0" role="link" title="View urgent letters on demo.betterletter.ai">
+                <span class="cp-ic ic-flag"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14V2M4 3h8l-2 2.5L12 8H4"/></svg></span>
+                <span class="cp-row-label">Urgent letters</span>
+                <span class="cp-row-value">45</span>
+              </div>
+              <div class="cp-row" data-filter="Not yet done" data-count="27" tabindex="0" role="link" title="View not-yet-done letters on demo.betterletter.ai">
+                <span class="cp-ic ic-pencil"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-8 8-3.5 1 1-3.5 8-8z"/></svg></span>
+                <span class="cp-row-label">Not yet done</span>
+                <span class="cp-row-value">27</span>
+              </div>
+              <div class="cp-row" data-filter="Completed letters" data-count="200" tabindex="0" role="link" title="View completed letters on demo.betterletter.ai">
+                <span class="cp-ic ic-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.2 11.7L13 4.5"/></svg></span>
+                <span class="cp-row-label">Completed letters</span>
+                <span class="cp-row-value">200</span>
+              </div>
+            </div>
+          </div>
+          <!-- inbox-zero celebration state -->
+          <div class="cp-body-zero">
+            <div class="cp-ring-wrap" id="cpRingZeroWrap">
+              <div class="cp-ring-center">
+                <span class="cp-ring-num">0</span>
+                <span class="cp-ring-cap">to go</span>
+              </div>
+            </div>
+            <div class="cp-rows">
+              <div class="cp-row" data-filter="Urgent letters" data-count="0" tabindex="0" role="link" title="View urgent letters on demo.betterletter.ai">
+                <span class="cp-ic ic-flag"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14V2M4 3h8l-2 2.5L12 8H4"/></svg></span>
+                <span class="cp-row-label">Urgent letters</span>
+                <span class="cp-row-value">0</span>
+              </div>
+              <div class="cp-row" data-filter="Not yet done" data-count="0" tabindex="0" role="link" title="View not-yet-done letters on demo.betterletter.ai">
+                <span class="cp-ic ic-pencil"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-8 8-3.5 1 1-3.5 8-8z"/></svg></span>
+                <span class="cp-row-label">Not yet done</span>
+                <span class="cp-row-value">0</span>
+              </div>
+              <div class="cp-row" data-filter="Completed letters" data-count="272" tabindex="0" role="link" title="View completed letters on demo.betterletter.ai">
+                <span class="cp-ic ic-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.2 11.7L13 4.5"/></svg></span>
+                <span class="cp-row-label">Completed letters</span>
+                <span class="cp-row-value">272</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cp-feed-card">
+        <div class="cp-feed-title">Recently completed letters</div>
+        <div class="cp-feed-row" tabindex="0" role="link" title="Open letter #4798 on demo.betterletter.ai">
+          <div class="cp-feed-main"><span class="cp-feed-id">Letter #4798 - dermatology</span><span class="cp-feed-time">12 mins ago</span></div>
+          <span class="cp-feed-link"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10L10 6M7 4h5v5M12 9v3a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1h3"/></svg></span>
+        </div>
+        <div class="cp-feed-row" tabindex="0" role="link" title="Open letter #4788 on demo.betterletter.ai">
+          <div class="cp-feed-main"><span class="cp-feed-id">Letter #4788 - orthopaedics</span><span class="cp-feed-time">25 mins ago</span></div>
+          <span class="cp-feed-link"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10L10 6M7 4h5v5M12 9v3a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1h3"/></svg></span>
+        </div>
+        <div class="cp-feed-row" tabindex="0" role="link" title="Open letter #4781 on demo.betterletter.ai">
+          <div class="cp-feed-main"><span class="cp-feed-id">Letter #4781 - cardiology</span><span class="cp-feed-time">38 mins ago</span></div>
+          <span class="cp-feed-link"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10L10 6M7 4h5v5M12 9v3a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1h3"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FULL PULSE MODAL (manager: V0/V1/V2) ============ -->
+    <div class="pulse-wrap" id="modalCard" role="dialog" aria-label="Pulse dashboard" data-period="day">
+      <div class="header-card">
+        <div class="modal-title">
+          <span class="ic">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13 2Z"/></svg>
+          </span>
+          <span id="modalTitle" class="pulse-fade">Daily Pulse for 24 July</span>
+        </div>
+        <div class="period-toggle">
+          <button class="period-seg" data-period="day">
+            <span class="chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Day
+          </button>
+          <button class="period-seg" data-period="week">
+            <span class="chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Week
+          </button>
+          <button class="period-seg" data-period="month">
+            <span class="chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Month
+          </button>
+        </div>
+      </div>
+
+      <!-- ---- V1+ chart row ---- -->
+      <div class="chart-row">
+        <div class="tile chart-tile">
+          <div class="chart-tile-head">
+            <span class="t-title"><span class="status-chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span id="tsTitle" class="pulse-fade">Daily team speed</span></span>
+            <span class="t-total pulse-fade"><span id="tsValue">40</span> <span class="t-total-sub">letters per hour avg</span></span>
+          </div>
+
+          <div class="ts-block" data-p="day">
+            <div class="ring-big-wrap" id="ringDayWrap">
+              <div class="ring-big-center">
+                <span class="ring-big-num">72</span>
+                <span class="ring-big-cap">letters from<br>inbox zero</span>
+              </div>
+            </div>
+            <div class="pace-line">Inbox zero estimated at 16:45 today at current pace</div>
+          </div>
+
+          <div class="ts-block" data-p="week">
+            <div class="mini-rings-row" id="weekDayRingsRow"></div>
+            <div class="ring-legend"><span><span class="dot g"></span>Hit inbox zero</span><span><span class="dot r"></span>Missed inbox zero</span></div>
+            <div class="pace-line">Inbox zero estimated by Friday 19:45 if this pace continues</div>
+            <div class="pace-banner">Your team needs an average speed of <b>45</b> letters per hour to reach inbox zero by 17:00 this Friday</div>
+          </div>
+
+          <div class="ts-block" data-p="month">
+            <div class="mini-rings-row" id="monthWeekRingsRow"></div>
+            <div class="ring-legend"><span><span class="dot g"></span>Hit inbox zero</span><span><span class="dot r"></span>Missed inbox zero</span></div>
+            <div class="pace-line">Inbox zero estimated by 12 Aug if this pace continues</div>
+            <div class="pace-banner">Your team needs an average speed of <b>45</b> letters per hour to reach inbox zero by 17:00 31 July</div>
+          </div>
+        </div>
+
+        <div class="tile chart-tile">
+          <div class="chart-tile-head">
+            <span class="t-title" id="pvTitle" class="pulse-fade">Daily pipeline volume</span>
+            <span class="t-total pulse-fade"><span id="pvValue">190</span> <span class="t-total-sub" id="pvValueSuffix">so far</span></span>
+          </div>
+
+          <div class="pv-frame" data-p="day">
+            <div id="pvDayChart"></div>
+            <div class="pv-footer">
+              <div class="pv-footer-left"><span class="pv-typical-legend"><span class="swatch"></span>Typical volume</span></div>
+              <span>Average daily volume: 210</span>
+            </div>
+          </div>
+
+          <div class="pv-frame" data-p="week">
+            <div id="pvWeekChart"></div>
+            <div class="pv-footer">
+              <div class="pv-footer-left"><span class="pv-typical-legend"><span class="swatch"></span>Typical volume</span></div>
+              <span>Average weekly volume: 15,000</span>
+            </div>
+            <div class="pv-toggle"><button class="active">Weekdays</button><button>Weekends</button></div>
+          </div>
+
+          <div class="pv-frame" data-p="month">
+            <div id="pvMonthChart"></div>
+            <div class="pv-footer">
+              <div class="pv-footer-left">
+                <span class="pv-weekend-legend"><span class="swatch"></span>Weekend</span>
+                <span class="pv-typical-legend"><span class="swatch"></span>Typical volume</span>
+              </div>
+              <span>Average monthly volume: 22,995</span>
+            </div>
+            <div class="pv-toggle"><button class="active">Weekdays</button><button>Weekends</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <div class="col-left">
+          <div class="tile">
+            <div class="tile-body pulse-fade" id="inputBody">
+              <div class="tile-head row-hotspot" id="inputHead" tabindex="0" role="link" title="View input letters on demo.betterletter.ai">
+                <span class="t-title"><span class="status-chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span id="inputTitle">Daily input</span></span>
+                <span class="t-total" id="inputTotal">200</span>
+              </div>
+              <div class="rows-list" id="inputRows"></div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile-body pulse-fade" id="completedBody">
+              <div class="tile-head row-hotspot" id="completedHead" tabindex="0" role="link" title="View completed letters on demo.betterletter.ai">
+                <span class="t-title"><span class="status-chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span id="completedTitle">Daily completed letters</span></span>
+                <span class="t-total" id="completedTotal">150</span>
+              </div>
+              <div class="rows-list" id="completedRows"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-right">
+          <div class="tile">
+            <div class="tile-body pulse-fade" id="pipelineBody">
+              <div class="tile-head row-hotspot" id="pipelineHead" tabindex="0" role="link" title="View pipeline on demo.betterletter.ai">
+                <span class="t-title"><span class="status-chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Currently in pipeline</span>
+                <span class="t-total" id="pipelineTotal">50</span>
+              </div>
+              <div class="group-head row-hotspot" id="needsActionHead" tabindex="0" role="link" title="View items needing action on demo.betterletter.ai">
+                <span class="g-title">Needs action from your team</span>
+                <span class="g-total" id="needsActionTotal">20</span>
+              </div>
+              <div class="rows-list" id="needsActionRows"></div>
+              <div class="tile-divider"></div>
+              <div class="group-head row-hotspot" id="everythingHead" tabindex="0" role="link" title="View automatic pipeline on demo.betterletter.ai">
+                <span class="g-title">Everything else</span>
+                <span class="g-total" id="everythingTotal">30</span>
+              </div>
+              <div class="rows-list" id="everythingRows"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* ---------------- ring / bar chart helpers ---------------- */
+  var COLOR = { green:'#B6EF3E', red:'#EF3E5D', navy:'#011936', future:'#DEE7EE', border:'#DEE7EE' };
+
+  // Proportional multi-segment ring (used for: big day ring, coder ring, mini pill ring).
+  function ringSVG(size, stroke, segments, remainderColor){
+    var r = (size - stroke) / 2;
+    var c = 2 * Math.PI * r;
+    var cx = size / 2, cy = size / 2;
+    var total = 0;
+    segments.forEach(function(s){ total += s.value; });
+    if(total <= 0) total = 1;
+    var parts = '';
+    if(remainderColor){
+      parts += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + remainderColor + '" stroke-width="' + stroke + '"/>';
+    }
+    var offset = 0;
+    segments.forEach(function(seg){
+      var frac = seg.value / total;
+      var len = frac * c;
+      if(len > 0){
+        parts += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + seg.color + '" stroke-width="' + stroke + '" stroke-linecap="round" stroke-dasharray="' + len + ' ' + (c - len) + '" stroke-dashoffset="' + (-offset) + '"/>';
+      }
+      offset += len;
+    });
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><g transform="rotate(-90 ' + cx + ' ' + cy + ')">' + parts + '</g></svg>';
+  }
+
+  // Simple single-colour "badge" ring for day/week mini-rings (colour encodes
+  // status only; fill is not proportional to the number - matches the reference,
+  // which uses colour, not fill-percentage, to signal hit/missed/today/future).
+  function miniRingSVG(size, stroke, color, closed){
+    var r = (size - stroke) / 2;
+    var c = 2 * Math.PI * r;
+    var cx = size / 2, cy = size / 2;
+    var gapFrac = closed ? 0 : 0.09;
+    var len = c * (1 - gapFrac);
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><g transform="rotate(-90 ' + cx + ' ' + cy + ')"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="' + stroke + '" stroke-linecap="round" stroke-dasharray="' + len + ' ' + (c - len) + '"/></g></svg>';
+  }
+
+  function renderMiniRingsRow(containerId, items){
+    var html = items.map(function(it){
+      var closed = it.style === 'today';
+      var svg = miniRingSVG(44, 6, COLOR[it.color], closed);
+      var dateClass = it.style === 'future' ? 'outline' : (it.style === 'today' ? 'filled' : 'filled');
+      var numClass = it.style === 'future' ? 'dim' : '';
+      return '' +
+        '<div class="mini-ring-chip">' +
+          '<div class="mini-ring-wrap">' + svg + '<span class="mini-ring-num ' + numClass + '">' + it.num + '</span></div>' +
+          '<span class="mini-ring-date ' + dateClass + '">' + it.date + '</span>' +
+        '</div>';
+    }).join('');
+    document.getElementById(containerId).innerHTML = html;
+  }
+
+  /* ---------------- bar chart rendering ---------------- */
+  function dayBarChart(){
+    var pct = [55,65,75,60,20,78,90,45,28];
+    var labels = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+    var tooltipIdx = 4, boldIdx = 6;
+    var typicalPct = 50;
+    var plot = '<div class="pv-plot"><div class="pv-typical" style="bottom:' + typicalPct + '%"></div>';
+    pct.forEach(function(p, i){
+      plot += '<div class="pv-col"><div class="pv-bar" style="height:' + p + '%">' +
+        (i === tooltipIdx ? '<div class="pv-tooltip">13:00 24 July<br>12 letters</div>' : '') +
+        '</div></div>';
+    });
+    plot += '</div>';
+    var axis = '<div class="pv-axis">' + labels.map(function(l, i){
+      return '<div class="pv-axis-cell"><span class="pv-label' + (i === boldIdx ? ' bold' : '') + '">' + l + '</span></div>';
+    }).join('') + '</div>';
+    document.getElementById('pvDayChart').innerHTML = plot + axis;
+  }
+
+  function weekBarChart(){
+    var pct =    [88, 80, 84, 58, 30, 0, 0];
+    var labels = ['20 Jul','21 Jul','22 Jul','23 Jul','Today','25 Jul','26 Jul'];
+    var dateStyle = ['filled','filled','filled','filled','filled','outline','outline'];
+    var tooltipIdx = 2;
+    var typicalPct = 62;
+    var plot = '<div class="pv-plot"><div class="pv-typical" style="bottom:' + typicalPct + '%"></div>';
+    pct.forEach(function(p, i){
+      plot += '<div class="pv-col">' + (p > 0 ? '<div class="pv-bar" style="height:' + p + '%">' +
+        (i === tooltipIdx ? '<div class="pv-tooltip">Wed 22 Jul<br>456 letters</div>' : '') +
+        '</div>' : '') + '</div>';
+    });
+    plot += '</div>';
+    var axis = '<div class="pv-axis">' + labels.map(function(l, i){
+      return '<div class="pv-axis-cell"><span class="mini-ring-date ' + dateStyle[i] + '">' + l + '</span></div>';
+    }).join('') + '</div>';
+    document.getElementById('pvWeekChart').innerHTML = plot + axis;
+  }
+
+  function monthBarChart(){
+    var groups = [
+      { label:'29 Jun-5 Jul', style:'filled', days:[62,68,72,65,70,30,25] },
+      { label:'6-12 Jul',     style:'filled', days:[58,64,60,55,20,28,22], tooltip:'6-12 Jul<br>5,259 letters this week' },
+      { label:'13-19 Jul',    style:'filled', days:[66,70,74,68,72,32,26] },
+      { label:'This week',   style:'filled', days:[60,64,58,0,0,0,0] },
+      { label:'27 Jul-2 Aug', style:'outline', days:[0,0,0,0,0,0,0] }
+    ];
+    var typicalPct = 55;
+    var plot = '<div class="pv-plot"><div class="pv-typical" style="bottom:' + typicalPct + '%"></div>';
+    groups.forEach(function(g){
+      plot += '<div class="pv-week-group' + (g.tooltip ? ' tt-target' : '') + '">';
+      if(g.tooltip){ plot += '<div class="pv-group-tooltip">' + g.tooltip + '</div>'; }
+      g.days.forEach(function(p, i){
+        var weekend = (i === 5 || i === 6);
+        plot += '<div class="pv-col' + (weekend ? ' weekend' : '') + '">' +
+          (p > 0 ? '<div class="pv-bar" style="height:' + p + '%"></div>' : '') +
+          '</div>';
+      });
+      plot += '</div>';
+    });
+    plot += '</div>';
+    var axis = '<div class="pv-axis">' + groups.map(function(g){
+      return '<div class="pv-axis-group"><span class="mini-ring-date ' + g.style + '">' + g.label + '</span></div>';
+    }).join('') + '</div>';
+    document.getElementById('pvMonthChart').innerHTML = plot + axis;
+  }
+
+  /* ---------------- static ring instances (day/week/month + coder + pill) ---------------- */
+  function renderStaticRings(){
+    // V1/V2 big day-view ring: navy arc ~75%, light remainder.
+    document.getElementById('ringDayWrap').insertAdjacentHTML('afterbegin',
+      ringSVG(150, 18, [{ value:75, color:COLOR.navy }], '#DDE4EC'));
+
+    renderMiniRingsRow('weekDayRingsRow', [
+      { num:'46', date:'20 Jul', color:'green', style:'past' },
+      { num:'45', date:'21 Jul', color:'green', style:'past' },
+      { num:'43', date:'22 Jul', color:'red',   style:'past' },
+      { num:'40', date:'23 Jul', color:'red',   style:'past' },
+      { num:'38', date:'Today',  color:'navy',  style:'today' },
+      { num:'-',  date:'25 Jul', color:'future', style:'future' },
+      { num:'-',  date:'26 Jul', color:'future', style:'future' }
+    ]);
+
+    renderMiniRingsRow('monthWeekRingsRow', [
+      { num:'47', date:'29 Jun-5 Jul', color:'green', style:'past' },
+      { num:'44', date:'6-12 Jul',     color:'red',   style:'past' },
+      { num:'45', date:'13-19 Jul',    color:'green', style:'past' },
+      { num:'29', date:'This week',    color:'navy',  style:'today' },
+      { num:'-',  date:'27 Jul-2 Aug', color:'future', style:'future' }
+    ]);
+
+    // Coder ring (normal): neutral(27) + red(45) + green(200), starting at 12 o'clock.
+    document.getElementById('cpRingNormalWrap').insertAdjacentHTML('afterbegin',
+      ringSVG(128, 18, [
+        { value:27, color:COLOR.navy },
+        { value:45, color:COLOR.red },
+        { value:200, color:COLOR.green }
+      ], null));
+    // Coder ring (celebration): all green.
+    document.getElementById('cpRingZeroWrap').insertAdjacentHTML('afterbegin',
+      ringSVG(128, 18, [{ value:1, color:COLOR.green }], null));
+
+    // Mini pill-icon rings (nav pill, coder mode).
+    document.getElementById('pillRingNormal').innerHTML = ringSVG(20, 4, [
+      { value:27, color:COLOR.navy },
+      { value:45, color:COLOR.red },
+      { value:200, color:COLOR.green }
+    ], null);
+    document.getElementById('pillRingZero').innerHTML = ringSVG(20, 4, [{ value:1, color:COLOR.green }], null);
+
+    dayBarChart();
+    weekBarChart();
+    monthBarChart();
+  }
+
+  /* ---------------- data ---------------- */
+  var DATA = {
+    day: {
+      title: "Daily Pulse for 24 July",
+      inputTitle: "Daily input",
+      completedTitle: "Daily completed letters",
+      teamSpeedTitle: "Daily team speed",
+      teamSpeedValue: "40",
+      pvTitle: "Daily pipeline volume",
+      pvValue: "190",
+      pvSuffix: "so far",
+      input: { total: 200, rows: [
+        { label:"Docman", value:110, pct:55 },
+        { label:"Email", value:0, pct:0 },
+        { label:"Manual upload", value:30, pct:15 },
+        { label:"MESH", value:60, pct:30 }
+      ]},
+      completed: { total:150, rows: [
+        { label:"Released", value:140, pct:93.3 },
+        { label:"Rejected", value:10, pct:6.7 }
+      ]},
+      pipeline: {
+        total:50,
+        needsActionTotal:20,
+        needsAction: [
+          { label:"Needs patient matching", value:0, pct:0, trend:'down' },
+          { label:"Needs review", value:20, pct:100 },
+          { label:"Needs rejection", value:0, pct:0, trend:'down' }
+        ],
+        everythingTotal:30,
+        everything: [
+          { label:"Preparing", value:20, pct:57 },
+          { label:"Review", value:9, pct:10 },
+          { label:"Coding", value:1, pct:10 }
+        ]
+      }
+    },
+    week: {
+      title: "Weekly Pulse for 20 - 26 July",
+      inputTitle: "Weekly input",
+      completedTitle: "Weekly completed letters",
+      teamSpeedTitle: "Weekly team speed",
+      teamSpeedValue: "38",
+      pvTitle: "Weekly pipeline volume",
+      pvValue: "7,000",
+      pvSuffix: "so far",
+      input: { total:7000, rows: [
+        { label:"Docman", value:4000, pct:55 },
+        { label:"Email", value:0, pct:0 },
+        { label:"Manual upload", value:1000, pct:15 },
+        { label:"MESH", value:2000, pct:30 }
+      ]},
+      completed: { total:4000, rows: [
+        { label:"Released", value:6000, pct:55 },
+        { label:"Rejected", value:600, pct:12 }
+      ]},
+      pipeline: {
+        total:3000,
+        needsActionTotal:20,
+        needsAction: [
+          { label:"Needs patient matching", value:0, pct:0 },
+          { label:"Needs review", value:20, pct:100 },
+          { label:"Needs rejection", value:0, pct:0 }
+        ],
+        everythingTotal:2980,
+        everything: [
+          { label:"Preparing", value:2000, pct:57 },
+          { label:"Review", value:900, pct:10 },
+          { label:"Coding", value:80, pct:10 }
+        ]
+      }
+    },
+    month: {
+      title: "Monthly Pulse for July 2026",
+      inputTitle: "Monthly input",
+      completedTitle: "Monthly completed letters",
+      teamSpeedTitle: "Monthly team speed",
+      teamSpeedValue: "20",
+      pvTitle: "Monthly pipeline volume",
+      pvValue: "21,325",
+      pvSuffix: "so far",
+      input: { total:28000, rows: [
+        { label:"Docman", value:4000, pct:55 },
+        { label:"Email", value:0, pct:0 },
+        { label:"Manual upload", value:1000, pct:15 },
+        { label:"MESH", value:2000, pct:30 }
+      ]},
+      completed: { total:19000, rows: [
+        { label:"Released", value:17003, pct:55, trend:'up' },
+        { label:"Rejected", value:1997, pct:12 }
+      ]},
+      pipeline: {
+        total:9000,
+        needsActionTotal:6020,
+        needsAction: [
+          { label:"Needs patient matching", value:6000, pct:67, trend:'up' },
+          { label:"Needs review", value:8, pct:5 },
+          { label:"Needs rejection", value:12, pct:6 }
+        ],
+        everythingTotal:2980,
+        everything: [
+          { label:"Preparing", value:2000, pct:57 },
+          { label:"Review", value:900, pct:10, trend:'up' },
+          { label:"Coding", value:80, pct:10 }
+        ]
+      }
+    }
+  };
+
+  var POPOVER = {
+    online:      { input:200, pipeline:50,  completed:150,  status:"Online" },
+    interrupted: { input:200, pipeline:400, completed:6600, status:"Interrupted" }
+  };
+
+  var POPOVER_BANNER = {
+    online: "Your team will hit inbox zero at 16:45 today if they stay at 40 letters per hour",
+    interrupted: "Your team will have to hit 78 letters per hour in order to hit inbox zero today"
+  };
+
+  var TABLE_ROWS = [
+    ["4335","-","Clinic Letter","1","Derek H…"],
+    ["4336","Maternity","-","2","Thomas…"],
+    ["4337","Maternity","Clinic Letter","1","Derek H…"],
+    ["4338","Dermatology","Clinic Letter","3","Dr. Alan…"],
+    ["4339","Maternity","Clinic Letter","3","Dr. Alan…"],
+    ["4340","-","Clinic Letter","2","Dr. Alan…"],
+    ["4341","Dermatology","Discharge Summary","10","Dr. Alan…"],
+    ["4342","Private GP","Clinic Letter","1","Dr. Alan…"],
+    ["4343","Gynaecology","Discharge Summary","11","Dr. Alan…"],
+    ["4344","Gynaecology","Discharge Summary","2","Dr. Alan…"],
+    ["4345","Maternity","Discharge Summary","4","-"],
+    ["4346","Maternity","Discharge Summary","3","-"],
+    ["4347","Oncology","Clinic Letter","6","Derek H…"],
+    ["4348","Diabetes And Endocrinolo…","Clinic Letter","14","Stiles S…"],
+    ["4349","Maternity","Clinic Letter","1","Stiles S…"],
+    ["4350","-","Clinic Letter","2","Stiles S…"],
+    ["4351","-","-","4","Stiles S…"],
+    ["4352","Private GP","Clinic Letter","3","Thomas…"],
+    ["4353","Gynaecology","Clinic Letter","1","-"],
+    ["4334","Dermatology","Clinic Letter","1","Derek H…"],
+    ["4354","Oncology","Clinic Letter","3","Stiles S…"],
+    ["4354","Oncology","Clinic Letter","3","Stiles S…"]
+  ];
+
+  /* ---------------- helpers ---------------- */
+  function fmt(n){ return Number(n).toLocaleString('en-GB'); }
+
+  function barStyle(pct){
+    var bg = 'linear-gradient(to right, #7A8A9F 0 ' + pct + '%, #F4F4F4 ' + pct + '% 100%)';
+    var border = (pct >= 100) ? 'none' : '1px solid #7A8B9F';
+    return 'background:' + bg + ';border:' + border + ';';
+  }
+
+  function trendChipHTML(trend){
+    if(!trend) return '';
+    var isDown = trend === 'down';
+    var arrow = isDown
+      ? '<svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M8 3v9M4 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M8 13V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var label = isDown ? 'Below usual' : 'above usual';
+    return '<span class="trend-chip">' + arrow + '<span>' + label + '</span></span>';
+  }
+
+  function dataRowHTML(r){
+    var hasBar = (r.pct !== undefined);
+    return '' +
+      '<div class="row-hotspot" tabindex="0" role="link" data-filter="' + r.label + '" data-count="' + r.value + '" title="View \'' + r.label + '\' on demo.betterletter.ai">' +
+        '<div class="row-top">' +
+          '<span class="row-label">' + r.label + trendChipHTML(r.trend) + '</span>' +
+          '<span class="row-value">' + fmt(r.value) + '</span>' +
+        '</div>' +
+        (hasBar ? '<div class="bar" style="' + barStyle(r.pct) + '"></div>' : '') +
+      '</div>';
+  }
+
+  function setFilterAttrs(id, label, count){
+    var el = document.getElementById(id);
+    el.setAttribute('data-filter', label);
+    el.setAttribute('data-count', count);
+  }
+
+  function renderModal(period){
+    var d = DATA[period];
+
+    document.getElementById('modalTitle').textContent = d.title;
+    document.getElementById('inputTitle').textContent = d.inputTitle;
+    document.getElementById('completedTitle').textContent = d.completedTitle;
+    document.getElementById('tsTitle').textContent = d.teamSpeedTitle;
+    document.getElementById('tsValue').textContent = d.teamSpeedValue;
+    document.getElementById('pvTitle').textContent = d.pvTitle;
+    document.getElementById('pvValue').textContent = d.pvValue;
+    document.getElementById('pvValueSuffix').textContent = d.pvSuffix;
+
+    document.getElementById('inputTotal').textContent = fmt(d.input.total);
+    document.getElementById('inputRows').innerHTML = d.input.rows.map(dataRowHTML).join('');
+
+    document.getElementById('completedTotal').textContent = fmt(d.completed.total);
+    document.getElementById('completedRows').innerHTML = d.completed.rows.map(dataRowHTML).join('');
+
+    document.getElementById('pipelineTotal').textContent = fmt(d.pipeline.total);
+    document.getElementById('needsActionTotal').textContent = fmt(d.pipeline.needsActionTotal);
+    document.getElementById('needsActionRows').innerHTML = d.pipeline.needsAction.map(dataRowHTML).join('');
+    document.getElementById('everythingTotal').textContent = fmt(d.pipeline.everythingTotal);
+    document.getElementById('everythingRows').innerHTML = d.pipeline.everything.map(dataRowHTML).join('');
+
+    setFilterAttrs('inputHead', d.inputTitle, d.input.total);
+    setFilterAttrs('completedHead', d.completedTitle, d.completed.total);
+    setFilterAttrs('pipelineHead', 'Currently in pipeline', d.pipeline.total);
+    setFilterAttrs('needsActionHead', 'Needs action from your team', d.pipeline.needsActionTotal);
+    setFilterAttrs('everythingHead', 'Everything else', d.pipeline.everythingTotal);
+
+    document.getElementById('modalCard').setAttribute('data-period', period);
+
+    document.querySelectorAll('.period-seg').forEach(function(seg){
+      seg.classList.toggle('active', seg.getAttribute('data-period') === period);
+    });
+  }
+
+  function renderPopover(state){
+    var p = POPOVER[state];
+    document.getElementById('povInput').textContent = fmt(p.input);
+    document.getElementById('povPipeline').textContent = fmt(p.pipeline);
+    document.getElementById('povCompleted').textContent = fmt(p.completed);
+    document.getElementById('povStatus').textContent = p.status;
+    document.getElementById('povStatusRow').classList.toggle('interrupted', state === 'interrupted');
+    document.getElementById('povBanner').textContent = POPOVER_BANNER[state];
+    document.getElementById('povBanner').classList.toggle('interrupted', state === 'interrupted');
+  }
+
+  function rowHTML(row){
+    return '<div class="row-grid data-row">' +
+      '<div><input type="checkbox"></div>' +
+      '<div class="dc">' + row[0] + '</div>' +
+      '<div class="dc">33344455</div>' +
+      '<div class="dc">02 Sep 2022</div>' +
+      '<div class="dc">01 Sep 2022</div>' +
+      '<div class="dc">Lee Valley GP</div>' +
+      '<div class="dc">' + row[1] + '</div>' +
+      '<div class="dc">' + row[2] + '</div>' +
+      '<div class="dc">' + row[3] + '</div>' +
+      '<div class="dc">' + row[4] + '</div>' +
+    '</div>';
+  }
+
+  function renderTable(){
+    document.getElementById('tableRows').innerHTML = TABLE_ROWS.map(rowHTML).join('');
+  }
+
+  function renderFilteredTable(){
+    var f = state.filter;
+    var resultsEl = document.getElementById('resultsLine');
+    var emptyEl = document.getElementById('emptyState');
+    var tableRowsEl = document.getElementById('tableRows');
+    if(f.count === 0){
+      tableRowsEl.innerHTML = '';
+      resultsEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = "No letters match '" + f.label + "'.";
+    } else {
+      emptyEl.style.display = 'none';
+      var shown = Math.min(f.count, 25);
+      var rows = [];
+      for(var i=0;i<shown;i++){ rows.push(TABLE_ROWS[i % TABLE_ROWS.length]); }
+      tableRowsEl.innerHTML = rows.map(rowHTML).join('');
+      resultsEl.style.display = 'block';
+      resultsEl.textContent = 'Showing ' + shown + ' of ' + fmt(f.count) + ' letters';
+    }
+  }
+
+  /* ---------------- state ---------------- */
+  var state = { version:'v0', role:'manager', period:'day', popoverOpen:false, coderPopoverOpen:false, modalOpen:false, pulse:'online', filter:null };
+
+  var scrim = document.getElementById('scrim');
+  var popover = document.getElementById('popover');
+  var coderPopover = document.getElementById('coderPopover');
+  var modalCard = document.getElementById('modalCard');
+  var pulsePill = document.getElementById('pulsePill');
+  var canvasEl = document.getElementById('canvas');
+  var bodyEl = document.body;
+  var hoverCloseTimer = null;
+  var HOVER_GRACE_MS = 150;
+
+  function currentSurface(){
+    return (state.version === 'v2' && state.role === 'coder') ? 'coder' : 'manager';
+  }
+
+  /* ---------------- popover left-align to pill ----------------
+     Walk the offsetParent chain (pure layout geometry) rather than
+     getBoundingClientRect, so the result is already in the unscaled
+     1440x1024 canvas coordinate system and stays correct under the
+     fit-to-screen transform:scale at any window size. */
+  function offsetLeftWithin(el, ancestor){
+    var x = 0;
+    var node = el;
+    while(node && node !== ancestor){
+      x += node.offsetLeft;
+      node = node.offsetParent;
+    }
+    return x;
+  }
+  function positionPopoverEl(el){
+    var x = offsetLeftWithin(pulsePill, canvasEl);
+    el.style.left = x + 'px';
+  }
+  function positionOpenPopover(){
+    if(state.popoverOpen) positionPopoverEl(popover);
+    if(state.coderPopoverOpen) positionPopoverEl(coderPopover);
+  }
+
+  function openPopover(){
+    if(currentSurface() === 'coder'){
+      state.coderPopoverOpen = true;
+      positionPopoverEl(coderPopover);
+      coderPopover.classList.add('open');
+    } else {
+      state.popoverOpen = true;
+      positionPopoverEl(popover);
+      popover.classList.add('open');
+    }
+  }
+  function closePopover(){
+    state.popoverOpen = false;
+    state.coderPopoverOpen = false;
+    popover.classList.remove('open');
+    coderPopover.classList.remove('open');
+  }
+  function openModal(){
+    state.modalOpen = true;
+    cancelHoverClose();
+    closePopover();
+    modalCard.classList.add('open');
+    scrim.classList.add('open');
+    renderModal(state.period);
+  }
+  function closeModal(){
+    state.modalOpen = false;
+    modalCard.classList.remove('open');
+    scrim.classList.remove('open');
+  }
+  function setPulseState(s){
+    state.pulse = s;
+    renderPopover(s);
+    bodyEl.setAttribute('data-pulse', s);
+  }
+
+  /* ---------------- period switch crossfade ----------------
+     The clicked segment's active state updates instantly (immediate click
+     feedback); only the data underneath - tile bodies + modal title + chart
+     titles - dips opacity, swaps content, and returns. The chart visuals
+     themselves (rings/bars) are pre-rendered per period and swapped via the
+     data-period CSS attribute instantly, not crossfaded - a first-pass
+     simplification (see build report). */
+  var periodFadeTimer = null;
+  var FADE_MS = 70;
+  function setActiveSegment(period){
+    document.querySelectorAll('.period-seg').forEach(function(seg){
+      seg.classList.toggle('active', seg.getAttribute('data-period') === period);
+    });
+  }
+  function crossfadeAndRenderModal(period){
+    clearTimeout(periodFadeTimer);
+    var fadeEls = [
+      document.getElementById('modalTitle'),
+      document.getElementById('inputBody'),
+      document.getElementById('completedBody'),
+      document.getElementById('pipelineBody'),
+      document.getElementById('tsTitle'),
+      document.getElementById('pvTitle')
+    ];
+    fadeEls.forEach(function(el){ el.classList.add('fade-dim'); });
+    periodFadeTimer = setTimeout(function(){
+      renderModal(period);
+      fadeEls.forEach(function(el){ el.classList.remove('fade-dim'); });
+    }, FADE_MS);
+  }
+  function setPeriod(p){
+    state.period = p;
+    setActiveSegment(p);
+    crossfadeAndRenderModal(p);
+  }
+
+  /* ---------------- filter ---------------- */
+  function applyFilter(label, count){
+    state.filter = { label: label, count: count };
+    document.getElementById('allLettersChip').classList.remove('active');
+    var chip = document.getElementById('filterChip');
+    chip.classList.add('show');
+    chip.classList.add('active');
+    document.getElementById('filterChipLabel').textContent = label + ' (' + fmt(count) + ')';
+    renderFilteredTable();
+  }
+  function clearFilter(){
+    state.filter = null;
+    document.getElementById('filterChip').classList.remove('show');
+    document.getElementById('filterChip').classList.remove('active');
+    document.getElementById('allLettersChip').classList.add('active');
+    document.getElementById('resultsLine').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    renderTable();
+  }
+  document.getElementById('filterClearBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    clearFilter();
+  });
+
+  /* ---------------- popover rows as filter links (manager popover) ----------------
+     "System status" is deliberately excluded - it is not a link. Each handler
+     stops propagation so the click does NOT also bubble to the popover's own
+     click listener (which opens the full modal). */
+  function popoverRowFilter(label, valueKey){
+    return function(e){
+      e.stopPropagation();
+      var count = POPOVER[state.pulse][valueKey];
+      closePopover();
+      applyFilter(label, count);
+    };
+  }
+  document.getElementById('povInputRow').addEventListener('click', popoverRowFilter('Input letters', 'input'));
+  document.getElementById('povPipelineRow').addEventListener('click', popoverRowFilter('Pipeline', 'pipeline'));
+  document.getElementById('povCompletedRow').addEventListener('click', popoverRowFilter('Completed letters', 'completed'));
+  ['povInputRow','povPipelineRow','povCompletedRow'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.click();
+    });
+  });
+
+  /* ---------------- coder popover rows as filter links ----------------
+     Delegated on the coder popover so it survives the normal/zero body swap.
+     Coder surface never opens the big modal - the ring popover IS the surface. */
+  coderPopover.addEventListener('click', function(e){
+    var row = e.target.closest('.cp-row[data-filter]');
+    if(!row) return;
+    var label = row.getAttribute('data-filter');
+    var count = parseInt(row.getAttribute('data-count'), 10) || 0;
+    closePopover();
+    applyFilter(label, count);
+  });
+  coderPopover.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    var row = e.target.closest('.cp-row[data-filter]');
+    if(!row) return;
+    e.preventDefault();
+    row.click();
+  });
+
+  /* ---------------- "View full breakdown" link (manager popover) ---------------- */
+  var povViewAllLink = document.getElementById('povViewAllLink');
+  povViewAllLink.addEventListener('click', function(e){
+    e.stopPropagation();
+    openModal();
+  });
+  povViewAllLink.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    openModal();
+  });
+
+  /* ---------------- events ---------------- */
+  // Hover preview: opening on mouseenter of the pill OR the open popover, with a
+  // short grace timeout on leaving either, so moving the cursor pill -> popover
+  // doesn't flicker. Which popover element opens depends on the active surface.
+  function cancelHoverClose(){
+    clearTimeout(hoverCloseTimer);
+    hoverCloseTimer = null;
+  }
+  function scheduleHoverClose(){
+    cancelHoverClose();
+    hoverCloseTimer = setTimeout(function(){ closePopover(); }, HOVER_GRACE_MS);
+  }
+  pulsePill.addEventListener('mouseenter', function(){
+    cancelHoverClose();
+    if(!state.modalOpen) openPopover();
+  });
+  pulsePill.addEventListener('mouseleave', scheduleHoverClose);
+  pulsePill.addEventListener('focus', function(){
+    cancelHoverClose();
+    if(!state.modalOpen) openPopover();
+  });
+  pulsePill.addEventListener('blur', scheduleHoverClose);
+  popover.addEventListener('mouseenter', cancelHoverClose);
+  popover.addEventListener('mouseleave', scheduleHoverClose);
+  coderPopover.addEventListener('mouseenter', cancelHoverClose);
+  coderPopover.addEventListener('mouseleave', scheduleHoverClose);
+
+  // Whole pill (and the popover) is one clickzone. Manager surface -> opens the
+  // full modal. Coder surface -> the ring popover IS the surface; clicking just
+  // keeps it open (no dashboard modal - deliberate, see build spec).
+  pulsePill.addEventListener('click', function(){
+    if(currentSurface() === 'coder'){ openPopover(); }
+    else { openModal(); }
+  });
+  pulsePill.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      if(currentSurface() === 'coder'){ openPopover(); }
+      else { openModal(); }
+    }
+  });
+  popover.addEventListener('click', function(){ openModal(); });
+
+  document.querySelectorAll('.period-seg').forEach(function(seg){
+    seg.addEventListener('click', function(){ setPeriod(seg.getAttribute('data-period')); });
+  });
+
+  scrim.addEventListener('click', closeModal);
+
+  // Modal row-hotspot clicks -> close overlay + apply filter.
+  // Delegated on the modal wrapper so it survives innerHTML re-renders on period switch.
+  modalCard.addEventListener('click', function(e){
+    var hot = e.target.closest('.row-hotspot[data-filter]');
+    if(!hot) return;
+    var label = hot.getAttribute('data-filter');
+    var count = parseInt(hot.getAttribute('data-count'), 10) || 0;
+    closeModal();
+    closePopover();
+    applyFilter(label, count);
+  });
+  modalCard.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    var hot = e.target.closest('.row-hotspot[data-filter]');
+    if(!hot) return;
+    e.preventDefault();
+    var label = hot.getAttribute('data-filter');
+    var count = parseInt(hot.getAttribute('data-count'), 10) || 0;
+    closeModal();
+    closePopover();
+    applyFilter(label, count);
+  });
+
+  // Weekdays/Weekends toggle: visual-only demo affordance (first pass - see report).
+  document.querySelectorAll('.pv-toggle').forEach(function(group){
+    group.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        group.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+      });
+    });
+  });
+
+  document.addEventListener('click', function(e){
+    if(!state.popoverOpen && !state.coderPopoverOpen) return;
+    if(popover.contains(e.target) || coderPopover.contains(e.target) || pulsePill.contains(e.target) || e.target.closest('.presenter-controls')) return;
+    closePopover();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      if(state.modalOpen) closeModal();
+      else if(state.popoverOpen || state.coderPopoverOpen) closePopover();
+    }
+  });
+
+  /* ---------------- version / role switching (presenter-only) ---------------- */
+  function updateControlLabels(){
+    var surface = currentSurface();
+    if(surface === 'coder'){
+      document.getElementById('dcOnline').textContent = 'Working';
+      document.getElementById('dcInterrupted').textContent = 'Inbox Zero';
+    } else {
+      document.getElementById('dcOnline').textContent = 'Online';
+      document.getElementById('dcInterrupted').textContent = 'Interrupted';
+    }
+  }
+
+  function setRole(role){
+    state.role = role;
+    document.querySelectorAll('#roleSeg .seg-btn').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-role') === role);
+    });
+    bodyEl.setAttribute('data-role', role);
+    closeModal();
+    closePopover();
+    updateControlLabels();
+  }
+
+  function applyVersion(v){
+    state.version = v;
+    document.querySelectorAll('#versionSeg .seg-btn').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-version') === v);
+    });
+    var roleBtns = document.querySelectorAll('#roleSeg .seg-btn');
+    if(v === 'v2'){
+      roleBtns.forEach(function(b){ b.disabled = false; });
+    } else {
+      roleBtns.forEach(function(b){ b.disabled = true; });
+      setRole('manager');
+    }
+    bodyEl.setAttribute('data-version', v);
+    closeModal();
+    closePopover();
+    updateControlLabels();
+  }
+
+  document.querySelectorAll('#versionSeg .seg-btn').forEach(function(b){
+    b.addEventListener('click', function(){ applyVersion(b.getAttribute('data-version')); });
+  });
+  document.querySelectorAll('#roleSeg .seg-btn').forEach(function(b){
+    b.addEventListener('click', function(){ if(!b.disabled) setRole(b.getAttribute('data-role')); });
+  });
+
+  /* ---------------- demo controls (explicitly non-product, live in the presenter bar) ----------------
+     Online/Interrupted double as Working/Inbox-Zero when the coder surface is
+     active (relabelled via updateControlLabels) - a deliberate reuse of the same
+     underlying state.pulse toggle rather than a second control (see build report). */
+  document.getElementById('dcOnline').addEventListener('click', function(){
+    cancelHoverClose();
+    closeModal();
+    setPulseState('online');
+    openPopover();
+  });
+  document.getElementById('dcInterrupted').addEventListener('click', function(){
+    cancelHoverClose();
+    closeModal();
+    setPulseState('interrupted');
+    openPopover();
+  });
+  document.getElementById('dcReset').addEventListener('click', function(){
+    cancelHoverClose();
+    closeModal();
+    closePopover();
+    clearFilter();
+    applyVersion('v0');
+    setPulseState('online');
+    state.period = 'day';
+    renderModal('day');
+  });
+
+  /* ---------------- fit-to-screen ---------------- */
+  function fitStage(){
+    var bar = document.querySelector('.presenter-bar');
+    var barH = bar ? bar.offsetHeight : 0;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var scale = Math.min(vw / 1440, (vh - barH) / 1024, 1);
+    document.getElementById('canvas').style.transform = 'scale(' + scale + ')';
+    positionOpenPopover();
+  }
+  window.addEventListener('load', fitStage);
+  window.addEventListener('resize', fitStage);
+
+  /* ---------------- init ---------------- */
+  renderStaticRings();
+  renderTable();
+  renderModal('day');
+  renderPopover('online');
+  updateControlLabels();
+  fitStage();
+
+})();
+</script>
+
+</body>
+</html>

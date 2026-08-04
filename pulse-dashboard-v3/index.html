@@ -787,7 +787,7 @@
         <span class="pv" id="povInput">200</span>
       </div>
       <div class="pill-row link" id="povPipelineRow" tabindex="0" role="link" title="View pipeline on demo.betterletter.ai">
-        <span class="pl"><svg class="pov-chk" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Pipeline</span>
+        <span class="pl"><svg class="pov-chk" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Letters in progress</span>
         <span class="pv" id="povPipeline">50</span>
       </div>
       <div class="pill-row link" id="povCompletedRow" tabindex="0" role="link" title="View completed letters on demo.betterletter.ai">
@@ -1010,7 +1010,7 @@
           <div class="tile">
             <div class="tile-body pulse-fade" id="pipelineBody">
               <div class="tile-head row-hotspot" id="pipelineHead" tabindex="0" role="link" title="View pipeline on demo.betterletter.ai">
-                <span class="t-title"><span class="status-chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Currently in pipeline</span>
+                <span class="t-title"><span class="status-chk"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Letters in progress</span>
                 <span class="t-total" id="pipelineTotal">50</span>
               </div>
               <div class="group-head row-hotspot" id="needsActionHead" tabindex="0" role="link" title="View items needing action on demo.betterletter.ai">
@@ -1020,7 +1020,7 @@
               <div class="rows-list" id="needsActionRows"></div>
               <div class="tile-divider"></div>
               <div class="group-head row-hotspot" id="everythingHead" tabindex="0" role="link" title="View automatic pipeline on demo.betterletter.ai">
-                <span class="g-title">Everything else</span>
+                <span class="g-title">Under AI review</span>
                 <span class="g-total" id="everythingTotal">30</span>
               </div>
               <div class="rows-list" id="everythingRows"></div>
@@ -1235,9 +1235,9 @@
         ],
         everythingTotal:30,
         everything: [
-          { label:"Preparing", value:20, pct:57 },
-          { label:"Review", value:9, pct:10 },
-          { label:"Coding", value:1, pct:10 }
+          { label:"AI reading letter", value:20, pct:57 },
+          { label:"AI checking codes", value:9, pct:10 },
+          { label:"AI sending to clinical system", value:1, pct:10 }
         ]
       }
     },
@@ -1270,9 +1270,9 @@
         ],
         everythingTotal:2980,
         everything: [
-          { label:"Preparing", value:2000, pct:57 },
-          { label:"Review", value:900, pct:10 },
-          { label:"Coding", value:80, pct:10 }
+          { label:"AI reading letter", value:2000, pct:57 },
+          { label:"AI checking codes", value:900, pct:10 },
+          { label:"AI sending to clinical system", value:80, pct:10 }
         ]
       }
     },
@@ -1305,9 +1305,9 @@
         ],
         everythingTotal:2980,
         everything: [
-          { label:"Preparing", value:2000, pct:57 },
-          { label:"Review", value:900, pct:10, trend:'up' },
-          { label:"Coding", value:80, pct:10 }
+          { label:"AI reading letter", value:2000, pct:57 },
+          { label:"AI checking codes", value:900, pct:10, trend:'up' },
+          { label:"AI sending to clinical system", value:80, pct:10 }
         ]
       }
     }
@@ -1411,9 +1411,9 @@
 
     setFilterAttrs('inputHead', d.inputTitle, d.input.total);
     setFilterAttrs('completedHead', d.completedTitle, d.completed.total);
-    setFilterAttrs('pipelineHead', 'Currently in pipeline', d.pipeline.total);
+    setFilterAttrs('pipelineHead', 'Letters in progress', d.pipeline.total);
     setFilterAttrs('needsActionHead', 'Needs action from your team', d.pipeline.needsActionTotal);
-    setFilterAttrs('everythingHead', 'Everything else', d.pipeline.everythingTotal);
+    setFilterAttrs('everythingHead', 'Under AI review', d.pipeline.everythingTotal);
 
     document.getElementById('modalCard').setAttribute('data-period', period);
 
@@ -1622,7 +1622,7 @@
     };
   }
   document.getElementById('povInputRow').addEventListener('click', popoverRowFilter('Input letters', 'input'));
-  document.getElementById('povPipelineRow').addEventListener('click', popoverRowFilter('Pipeline', 'pipeline'));
+  document.getElementById('povPipelineRow').addEventListener('click', popoverRowFilter('Letters in progress', 'pipeline'));
   document.getElementById('povCompletedRow').addEventListener('click', popoverRowFilter('Completed letters', 'completed'));
   ['povInputRow','povPipelineRow','povCompletedRow'].forEach(function(id){
     document.getElementById(id).addEventListener('keydown', function(e){

@@ -572,9 +572,14 @@
   .row-hotspot:hover{ background:#CEEBFF; }
   .row-hotspot:hover .row-value, .row-hotspot:hover .g-total, .row-hotspot:hover .t-total{ text-decoration-thickness:2px; }
 
+  /* Title/header row hover: substantial, rounded fill with ~8px breathing room into
+     the gutter (halfway, no edge bleed) and generous vertical padding so it never looks
+     squashed. Scoped to header rows only - bar-row hovers stay as-is. */
   .tile-head.row-hotspot,
   .group-head.row-hotspot{
-    margin-bottom:16px;
+    padding:8px;
+    margin:-8px -8px 12px;
+    border-radius:6px;
   }
   .tile-head.row-hotspot:hover,
   .group-head.row-hotspot:hover{

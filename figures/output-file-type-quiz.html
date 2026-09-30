@@ -1,7 +1,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-<title>Letters List - quick self-check</title>
+<title>Output File Type - quick self-check</title>
 
 <style>
   :root{
@@ -408,54 +408,61 @@
 <script>
   var QUESTIONS = [
     {
-      type: "open",
-      short: "Old homepage and its downside",
-      q: "What did the BetterLetter homepage look like before this project, and what was the main downside?",
-      a: "The workflow tabs (Preparing, Review, Coding, Released, Rejected), worked one at a time, so one queue was split across many screens. The unfinished Letters (beta) page alongside it lacked the columns and filters coders needed, and the list could take up to ~20 seconds to load."
-    },
-    {
       type: "mc",
-      short: "Preset letter count",
-      q: "Which number tells you how many letters a preset is showing?",
+      short: "Filing before the setting existed",
+      q: "What did BetterLetter file before this setting existed?",
       options: [
-        "The \"N of M letters selected\" line in the toolbar",
-        "The total at the bottom of the list",
-        "The number next to Letters in the top nav",
-        "The count on the preset button itself"
-      ],
-      correctIndex: 3,
-      explanation: "There's no separate counter."
-    },
-    {
-      type: "open",
-      short: "Why manual rejection for in-app uploads",
-      q: "Why is rejecting an in-app uploaded letter done manually rather than through Docman?",
-      a: "There's no Docman file behind an in-app upload, so there's nothing for Docman to move. Rejection is manual in the app."
-    },
-    {
-      type: "mc",
-      short: "Where managers get a pipeline overview",
-      q: "Where does a practice manager get a quick overview of how their letters are moving?",
-      options: [
-        "The Coding (legacy) tabs",
-        "The Needs rejection preset",
-        "Daily Pulse in the top nav",
-        "Practice settings"
+        "The plain letter everywhere, with the summary kept in BetterLetter",
+        "Highlights in Docman and the plain letter in EMIS",
+        "The letter with highlights and a summary page with tasks, everywhere",
+        "Whatever each practice had asked support to set up"
       ],
       correctIndex: 2,
-      explanation: "The Letters page is where they act on it, for example bulk assigning."
+      explanation: "There was no choice."
+    },
+    {
+      type: "mc",
+      short: "Two systems, two settings",
+      q: "A Docman + EMIS practice wants highlights for their task team but a plain letter on the record. How many settings do they change?",
+      options: [
+        "One, the setting covers the whole practice",
+        "None, Docman always gets highlights anyway",
+        "Three, Docman, EMIS and the summary page",
+        "Two, Docman and EMIS are set separately"
+      ],
+      correctIndex: 3,
+      explanation: "Docman stays annotated and EMIS is set to Letter only."
     },
     {
       type: "open",
-      short: "“The list didn’t update”",
-      q: "A manager says \"the list didn't update when the coder finished a letter - it's broken.\" Are they right?",
-      a: "No. Lists don't auto-update in real time by design; refresh or re-filter to see the latest."
+      short: "Fully annotated vs no tasks",
+      q: "What's the one difference between Fully annotated and Annotated, no tasks?",
+      a: "Annotated, no tasks leaves the tasks table off the summary page. Both keep the highlights and the summary page."
     },
     {
       type: "open",
-      short: "Legacy tabs for a new practice",
-      q: "A trainer asks whether to show the legacy tabs to a new practice \"so they know both\". What do you tell them?",
-      a: "No. Teach the Letters page and Daily Pulse only; the tabs are being switched off, and a new practice shouldn't learn something we're about to remove."
+      short: "Switching doesn't apply retroactively",
+      q: "A practice switches to Letter only today. What happens to letters filed last week?",
+      a: "Nothing. The setting only affects letters filed after the change."
+    },
+    {
+      type: "mc",
+      short: "Default setting for a new practice",
+      q: "A new EMIS-only practice is set up today. What does BetterLetter file for it until someone changes the setting?",
+      options: [
+        "Fully annotated",
+        "Highlighted letter",
+        "Annotated, no tasks",
+        "Letter only"
+      ],
+      correctIndex: 3,
+      explanation: "New practices start on Letter only for EMIS and SystmOne, and Fully annotated for Docman. Existing practices were moved over on Fully annotated so nothing changed for them."
+    },
+    {
+      type: "open",
+      short: "Patient seeing internal notes",
+      q: "A practice manager worries a patient will see internal notes on their letters. What do you suggest?",
+      a: "Set the destination their records come from to Letter only or Highlighted letter, which have no summary page, and explain it applies from now on."
     }
   ];
 

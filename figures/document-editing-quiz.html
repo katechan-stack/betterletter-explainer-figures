@@ -1,7 +1,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-<title>Letters List - quick self-check</title>
+<title>Document Editing - quick self-check</title>
 
 <style>
   :root{
@@ -408,54 +408,61 @@
 <script>
   var QUESTIONS = [
     {
-      type: "open",
-      short: "Old homepage and its downside",
-      q: "What did the BetterLetter homepage look like before this project, and what was the main downside?",
-      a: "The workflow tabs (Preparing, Review, Coding, Released, Rejected), worked one at a time, so one queue was split across many screens. The unfinished Letters (beta) page alongside it lacked the columns and filters coders needed, and the list could take up to ~20 seconds to load."
-    },
-    {
       type: "mc",
-      short: "Preset letter count",
-      q: "Which number tells you how many letters a preset is showing?",
+      short: "Splitting before the feature existed",
+      q: "Before split existed, what did a practice do when one scan held two patients' letters?",
       options: [
-        "The \"N of M letters selected\" line in the toolbar",
-        "The total at the bottom of the list",
-        "The number next to Letters in the top nav",
-        "The count on the preset button itself"
-      ],
-      correctIndex: 3,
-      explanation: "There's no separate counter."
-    },
-    {
-      type: "open",
-      short: "Why manual rejection for in-app uploads",
-      q: "Why is rejecting an in-app uploaded letter done manually rather than through Docman?",
-      a: "There's no Docman file behind an in-app upload, so there's nothing for Docman to move. Rejection is manual in the app."
-    },
-    {
-      type: "mc",
-      short: "Where managers get a pipeline overview",
-      q: "Where does a practice manager get a quick overview of how their letters are moving?",
-      options: [
-        "The Coding (legacy) tabs",
-        "The Needs rejection preset",
-        "Daily Pulse in the top nav",
-        "Practice settings"
+        "Asked BetterLetter support to separate it from the admin panel",
+        "Coded both patients from the one letter, then moved the codes across",
+        "Rejected it, downloaded it, split the PDF outside BetterLetter and re-uploaded both halves",
+        "Sent it back to Docman to separate with merge and file"
       ],
       correctIndex: 2,
-      explanation: "The Letters page is where they act on it, for example bulk assigning."
+      explanation: "It lost the letter's place in the queue and its assignment."
+    },
+    {
+      type: "mc",
+      short: "What merge checks (and doesn't)",
+      q: "What does BetterLetter check before it lets letters merge?",
+      options: [
+        "That every letter has the same patient NHS number and date of birth",
+        "That every letter came in by the same route on the same day",
+        "That every letter has been annotated and approved by a reviewer",
+        "That every letter is from the same practice and still in Preparing, Edit or Review"
+      ],
+      correctIndex: 3,
+      explanation: "It deliberately doesn't check the patient, so unmatched letters can be merged; checking the NHS number is on you."
     },
     {
       type: "open",
-      short: "“The list didn’t update”",
-      q: "A manager says \"the list didn't update when the coder finished a letter - it's broken.\" Are they right?",
-      a: "No. Lists don't auto-update in real time by design; refresh or re-filter to see the latest."
+      short: "Reorder mid-annotation",
+      q: "You confirm a reorder on a letter someone has half annotated. What happens to their work?",
+      a: "It's lost. The letter goes back through the AI from scratch and its annotations are redone."
     },
     {
       type: "open",
-      short: "Legacy tabs for a new practice",
-      q: "A trainer asks whether to show the legacy tabs to a new practice \"so they know both\". What do you tell them?",
-      a: "No. Teach the Letters page and Daily Pulse only; the tabs are being switched off, and a new practice shouldn't learn something we're about to remove."
+      short: "Why split loses annotations",
+      q: "Why don't new letters from a split keep the annotations for their pages?",
+      a: "Text the AI read as part of the whole bundle may not be right for a page on its own, so each new letter is treated like a fresh upload."
+    },
+    {
+      type: "mc",
+      short: "Adding a Coding-stage letter to a merge",
+      q: "Someone wants to add letter #139 to a merge, but it's already in Coding. What happens?",
+      options: [
+        "It's added, and the merged letter jumps straight to Coding",
+        "It's added, but its pages show as read-only in the merge",
+        "It's pulled back to Review first, then added",
+        "It's refused with \"#139 is in coding and can't be merged\""
+      ],
+      correctIndex: 3,
+      explanation: "Only letters in Preparing, Edit or Review can be merged."
+    },
+    {
+      type: "open",
+      short: "Undoing a wrong merge",
+      q: "A practice merged a cover letter with the wrong results letter. How do they fix it?",
+      a: "Split the merged letter where the results start. There's no undo button; split and merge reverse each other."
     }
   ];
 
